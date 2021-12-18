@@ -1,0 +1,12 @@
+---
+server:
+  port: 8891
+
+spring:
+  main:
+    banner-mode: off
+
+  datasource:
+    username: vibinsystem
+    password: vibinsystem
+    url: jdbc:mariadb://localhost:3306/vibinapp
