@@ -7,7 +7,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-final class DemoApplicationTests extends AbstractDBTest {
+final class FriendServiceTest extends AbstractDBTest {
     @Inject
     private FriendService service;
 
