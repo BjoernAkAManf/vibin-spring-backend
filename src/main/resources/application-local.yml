@@ -2,15 +2,15 @@
 server:
   port: 8891
 
-spring:
-  datasource:
-    username: vibinsystem
-    password: vibinsystem
-    url: jdbc:mariadb://localhost:3306/vibinapp
+#spring:
+#  datasource:
+#    username: vibinsystem
+#    password: vibinsystem
+#    url: jdbc:mariadb://localhost:3306/vibinapp
 
 keycloak:
   realm: master
-  auth-server-url: http://127.0.0.1:8888/auth
+  auth-server-url: http://localhost:8888/auth
   ssl-required: none
   # ssl-required: external
   resource: test-client

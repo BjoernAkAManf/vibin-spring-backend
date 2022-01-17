@@ -1,6 +1,5 @@
 package com.vibinofficial.backend;
 
-import com.vibinofficial.backend.rest.Constants;
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
 import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter;
@@ -18,8 +17,7 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         super.configure(http);
 
         http.authorizeRequests()
-                .mvcMatchers(Constants.FRIEND_ROUTE_PREFIX + "/username").permitAll()
-                .antMatchers(Constants.FRIEND_ROUTE_PREFIX + "/state/**").authenticated()
+                .mvcMatchers("/api/**").authenticated()
                 .anyRequest().denyAll();
     }
 
