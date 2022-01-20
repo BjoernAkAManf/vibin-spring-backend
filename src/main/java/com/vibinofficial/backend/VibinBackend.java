@@ -20,6 +20,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 )
 @KeycloakConfiguration
 public class VibinBackend {
+
     public static void main(String[] args) {
         SpringApplication.run(VibinBackend.class, args);
     }

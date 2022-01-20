@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties("vibin")
 public class VibinConfig {
+
     private String token;
     private String key;
     private String account;

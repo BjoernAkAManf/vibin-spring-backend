@@ -1,6 +1,5 @@
 package com.vibinofficial.backend;
 
-import org.javatuples.Pair;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Service
 public final class QueueImpl implements VibinQueue {
+
     // Random Queue without any smart decisions, first user gets matched with second etc
     private final Queue<String> queue = new ConcurrentLinkedQueue<>();
 
@@ -20,13 +20,16 @@ public final class QueueImpl implements VibinQueue {
 
     @Override
     @NonNull
-    public Optional<Pair<String, String>> poll() {
+    public Optional<QueueMatch> pollMatch() {
         // Synchronizing and polling every 200 ms results in a noticeable delay (!)
         synchronized (this.queue) {
             if (this.queue.size() < 2) {
                 return Optional.empty();
             }
-            return Optional.of(Pair.with(this.queue.remove(), this.queue.remove()));
+
+            final String user1 = this.queue.remove();
+            final String user2 = this.queue.remove();
+            return Optional.of(QueueMatch.of(user1, user2));
         }
     }
 }

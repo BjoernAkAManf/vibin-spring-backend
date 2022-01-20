@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 @Data
 @Service
 public class VideoService {
+
     private final VibinConfig config;
 
     @EventListener

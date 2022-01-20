@@ -20,6 +20,7 @@ import java.io.IOException;
 @KeycloakConfiguration
 @RequiredArgsConstructor
 public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
+
     private final ObjectMapper mapper;
 
     @Override

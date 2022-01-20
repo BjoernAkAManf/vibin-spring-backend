@@ -4,7 +4,6 @@ import com.vibinofficial.backend.api.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
-import org.javatuples.Pair;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,32 +23,32 @@ import java.util.function.Consumer;
 @RequestMapping(path = "/api")
 @RequiredArgsConstructor
 public class VibinController {
+
     private final QueueImpl queue;
     private final Map<String, List<Consumer<String>>> events = new HashMap<>();
 
     @Scheduled(fixedRate = 200, timeUnit = TimeUnit.MILLISECONDS)
     public void createPolling() {
-        final Optional<Pair<String, String>> poll = this.queue.poll();
-        poll.ifPresent(this::dispatchMatchEvent);
+        final Optional<QueueMatch> queueMatch = this.queue.pollMatch();
+        queueMatch.ifPresent(this::dispatchMatchEvent);
     }
 
-    private void dispatchMatchEvent(Pair<String, String> poll) {
-        final var u1 = poll.getValue1();
-        final var u2 = poll.getValue0();
-        log.info("Dispatching Match {} with {}", u1, u2);
-        dispatchEvent(u1, u2);
-        dispatchEvent(u2, u1);
+    private void dispatchMatchEvent(QueueMatch queueMatch) {
+        final String user1 = queueMatch.getUser1();
+        final String user2 = queueMatch.getUser2();
+
+        log.info("Dispatching Match {} with {}", user1, user2);
+        dispatchMatchEvent(user1, user2);
+        dispatchMatchEvent(user2, user1);
     }
 
-    private void dispatchEvent(final String user, final String match) {
-        final var handler = Optional.ofNullable(this.events.get(user))
+    private void dispatchMatchEvent(final String user, final String match) {
+        Optional.ofNullable(this.events.get(user))
                 .flatMap(i -> i.stream().findFirst())
-                .orElse(null);
-        if (handler == null) {
-            log.warn("User Event scheduled, but has not yet joined: {}", user);
-            return;
-        }
-        handler.accept(match);
+                .ifPresentOrElse(
+                        (handler) -> handler.accept(match),
+                        () -> log.warn("User Event scheduled, but has not yet joined: {}", user)
+                );
     }
 
     @ExceptionHandler(AsyncRequestTimeoutException.class)
@@ -60,7 +59,7 @@ public class VibinController {
     @PostMapping("/queue/join")
     @AsyncAction
     public Mono<MatchInfo> joinQueue(final Principal principal) {
-        final var user = principal.getName();
+        final String user = principal.getName();
         // Add to Queue
         this.queue.join(user);
 
@@ -68,10 +67,9 @@ public class VibinController {
         // TODO: Check Blocklist
         // TODO: Check TMP Blocklist (Mismatches do not get rematched until a cool off period)
 
-        // wait until we has partner
+        // wait until we have a partner
         return Mono.create(sink -> {
-            // (╯°□°）╯︵ ┻━┻
-            final var userEvents = this.events.computeIfAbsent(user, k -> new ArrayList<>());
+            final List<Consumer<String>> userEvents = this.events.computeIfAbsent(user, k -> new ArrayList<>());
             final Consumer<String> onMatchFound = match -> sink.success(
                     MatchInfo.builder()
                             .matchUserId(match)
@@ -109,7 +107,7 @@ public class VibinController {
 
     @SyncAction
     public void respondToMatch(final Principal principal, final String token, final boolean accept) {
-        final var uid = principal.getName();
+        final String uid = principal.getName();
         // Server notifies waiting clients in syncRoom.
     }
 
