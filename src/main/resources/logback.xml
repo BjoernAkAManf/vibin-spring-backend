@@ -12,6 +12,7 @@
     <logger name="javax.management" level="INFO"/>
     <logger name="java.io.serialization" level="INFO"/>
     <logger name="_org.springframework" level="INFO"/>
+    <logger name="io.netty" level="INFO"/>
 
     <!-- Might potentially add addition information (?) -->
     <logger name="org.apache.http" level="INFO"/>

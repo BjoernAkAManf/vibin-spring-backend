@@ -2,11 +2,11 @@
 server:
   port: 8891
 
-#spring:
-#  datasource:
-#    username: vibinsystem
-#    password: vibinsystem
-#    url: jdbc:mariadb://localhost:3306/vibinapp
+  #spring:
+  #  datasource:
+  #    username: vibinsystem
+  #    password: vibinsystem
+  #    url: jdbc:mariadb://localhost:3306/vibinapp
 
 keycloak:
   realm: master
@@ -16,3 +16,14 @@ keycloak:
   resource: test-client
   public-client: true
   confidential-port: 0
+
+spring:
+  mvc:
+    async:
+      # 5 Minutes inactivity kills an async request
+      request-timeout: 300000
+
+vibin:
+  token: "twilio-example-token"
+  account: "twilio-example-account"
+  key: "twilio-example-key"

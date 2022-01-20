@@ -11,4 +11,5 @@ keycloak:
   # Attribute needs to be the unique DB uuid => allows UUID.fromString(principal.getName())
   principal-attribute: id
 
+
 #  use-resource-role-mappings: true

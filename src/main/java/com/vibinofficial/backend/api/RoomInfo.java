@@ -10,5 +10,8 @@ public final class RoomInfo {
     private final boolean success;
 
     @Nullable // Only set if success is true, personalized to a given user-id
+    private final String roomName;
+
+    @Nullable // Only set if success is true, personalized to a given user-id
     private final String token;
 }
