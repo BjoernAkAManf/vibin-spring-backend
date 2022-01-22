@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,14 +24,16 @@ import java.util.function.Consumer;
 @RestController
 @RequestMapping(path = "/api")
 @RequiredArgsConstructor
+@EnableAsync
 public class VibinController {
 
-    private final QueueImpl queue;
+    private final VibinQueue queueService;
     private final Map<String, List<Consumer<String>>> events = new HashMap<>();
 
-    @Scheduled(fixedRate = 200, timeUnit = TimeUnit.MILLISECONDS)
+
+    @Scheduled(fixedRate = 1000, timeUnit = TimeUnit.MILLISECONDS)
     public void createPolling() {
-        final Optional<QueueMatch> queueMatch = this.queue.pollMatch();
+        final Optional<QueueMatch> queueMatch = this.queueService.pollMatch();
         queueMatch.ifPresent(this::dispatchMatchEvent);
     }
 
@@ -46,29 +50,38 @@ public class VibinController {
         Optional.ofNullable(this.events.get(user))
                 .flatMap(i -> i.stream().findFirst())
                 .ifPresentOrElse(
-                        (handler) -> handler.accept(match),
+                        (handler) -> {
+                            log.warn("Handlers: {}", this.events);
+                            log.warn("Handlers: {}", handler);
+                            handler.accept(match);
+                        },
                         () -> log.warn("User Event scheduled, but has not yet joined: {}", user)
                 );
     }
 
     @ExceptionHandler(AsyncRequestTimeoutException.class)
     public ResponseEntity<HasuraError> onTimeoutException(final AsyncRequestTimeoutException ex) {
+        log.info("some timeout occurred {}", ex);
+        // TODO remove on timeout, timestamp in queue?
         return HasuraError.createResponse(HttpStatus.SC_REQUEST_TIMEOUT, ex);
     }
 
+    @Async
     @PostMapping("/queue/join")
     @AsyncAction
     public Mono<MatchInfo> joinQueue(final Principal principal) {
         final String user = principal.getName();
+        log.info("joining queue POST: {}", user);
         // Add to Queue
-        this.queue.join(user);
+        this.queueService.join(user);
 
         // TODO: Check Criteria list (e.g. Language; Interest, if applicable)
         // TODO: Check Blocklist
         // TODO: Check TMP Blocklist (Mismatches do not get rematched until a cool off period)
 
         // wait until we have a partner
-        return Mono.create(sink -> {
+        log.info("Creating sink");
+        Mono<MatchInfo> sinkerino = Mono.create(sink -> {
             final List<Consumer<String>> userEvents = this.events.computeIfAbsent(user, k -> new ArrayList<>());
             final Consumer<String> onMatchFound = match -> sink.success(
                     MatchInfo.builder()
@@ -81,6 +94,14 @@ public class VibinController {
             userEvents.add(onMatchFound);
             sink.onDispose(() -> userEvents.remove(onMatchFound));
         });
+        log.info("Finished creating sink");
+
+//        return sinkerino.doOnError(x -> log.info("FOOOO " + x.toString()));
+//
+//        Mono.defer()
+//            Mono.just()
+//        sinkerino.delaySubscription()
+        return sinkerino;
     }
 
     @AsyncAction
