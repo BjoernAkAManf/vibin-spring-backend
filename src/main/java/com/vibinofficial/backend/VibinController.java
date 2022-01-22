@@ -1,6 +1,7 @@
 package com.vibinofficial.backend;
 
 import com.vibinofficial.backend.api.*;
+import com.vibinofficial.backend.twilio.VibinConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
@@ -28,11 +29,15 @@ import java.util.function.Consumer;
 public class VibinController {
 
     private final VibinQueue queueService;
+    private final VibinConfig config;
     private final Map<String, List<Consumer<String>>> events = new HashMap<>();
-
 
     @Scheduled(fixedRate = 1000, timeUnit = TimeUnit.MILLISECONDS)
     public void createPolling() {
+        if (!this.config.isEnabled()) {
+            log.warn("Polling disabled!");
+            return;
+        }
         final Optional<QueueMatch> queueMatch = this.queueService.pollMatch();
         queueMatch.ifPresent(this::dispatchMatchEvent);
     }

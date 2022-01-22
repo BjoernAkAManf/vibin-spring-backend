@@ -1,5 +1,6 @@
 package com.vibinofficial.backend;
 
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
+@Data
 @Slf4j
 @Service
 public final class QueueImpl implements VibinQueue {
@@ -36,7 +38,7 @@ public final class QueueImpl implements VibinQueue {
         // Synchronizing and polling every 200 ms results in a noticeable delay (?)
         synchronized (this.queue) {
             final int size = this.queue.size();
-            List<String> shortenedQueueEntries = this.queue.stream().map(x -> x.substring(0, 4)).collect(Collectors.toList());
+            List<String> shortenedQueueEntries = this.queue.stream().map(x -> x.substring(0, Math.min(x.length(), 4))).collect(Collectors.toList());
             log.info("Queue size: {}: {}", size, shortenedQueueEntries);
             if (size < 2) {
                 return Optional.empty();
