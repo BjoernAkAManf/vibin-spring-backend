@@ -16,6 +16,13 @@ public interface VibinQueue {
      */
     void join(String uid);
 
+    /**
+     * Called whenever a given User no longer wants to join a call.
+     *
+     * @param uid User ID
+     */
+    void remove(String uid);
+
     @NonNull
     Optional<QueueMatch> pollMatch();
 }

@@ -6,15 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
-import reactor.core.publisher.Mono;
+import org.springframework.web.context.request.async.DeferredResult;
 
 import java.security.Principal;
 import java.util.*;
@@ -25,7 +21,7 @@ import java.util.function.Consumer;
 @RestController
 @RequestMapping(path = "/api")
 @RequiredArgsConstructor
-@EnableAsync
+@EnableAsync // TODO remove?
 public class VibinController {
 
     private final VibinQueue queueService;
@@ -66,16 +62,25 @@ public class VibinController {
 
     @ExceptionHandler(AsyncRequestTimeoutException.class)
     public ResponseEntity<HasuraError> onTimeoutException(final AsyncRequestTimeoutException ex) {
-        log.info("some timeout occurred {}", ex);
+        log.info("some timeout occurred", ex);
         // TODO remove on timeout, timestamp in queue?
         return HasuraError.createResponse(HttpStatus.SC_REQUEST_TIMEOUT, ex);
     }
 
-    @Async
+    @GetMapping("/queue/foo/{name}")
+    public DeferredResult<MatchInfo> joinQueue(final @PathVariable String name) {
+        return this.meow(name);
+    }
+
+    //    @Async
     @PostMapping("/queue/join")
     @AsyncAction
-    public Mono<MatchInfo> joinQueue(final Principal principal) {
+    public DeferredResult<MatchInfo> joinQueue(final Principal principal) {
         final String user = principal.getName();
+        return meow(user);
+    }
+
+    private DeferredResult<MatchInfo> meow(String user) {
         log.info("joining queue POST: {}", user);
         // Add to Queue
         this.queueService.join(user);
@@ -86,27 +91,22 @@ public class VibinController {
 
         // wait until we have a partner
         log.info("Creating sink");
-        Mono<MatchInfo> sinkerino = Mono.create(sink -> {
-            final List<Consumer<String>> userEvents = this.events.computeIfAbsent(user, k -> new ArrayList<>());
-            final Consumer<String> onMatchFound = match -> sink.success(
-                    MatchInfo.builder()
-                            .matchUserId(match)
-                            .matchToken("my-token-" + user)
-                            .build()
-            );
+        final DeferredResult<MatchInfo> m = new DeferredResult<>();
+        this.events.computeIfAbsent(user, k -> new ArrayList<>());
+        final List<Consumer<String>> userEvents = this.events.computeIfAbsent(user, k -> new ArrayList<>());
+        final Consumer<String> onMatchFound = match -> m.setResult(
+                MatchInfo.builder()
+                        .matchUserId(match)
+                        .matchToken("my-token-" + user)
+                        .build()
+        );
 
-            // Can be called externally: Return Match
-            userEvents.add(onMatchFound);
-            sink.onDispose(() -> userEvents.remove(onMatchFound));
-        });
-        log.info("Finished creating sink");
-
-//        return sinkerino.doOnError(x -> log.info("FOOOO " + x.toString()));
-//
-//        Mono.defer()
-//            Mono.just()
-//        sinkerino.delaySubscription()
-        return sinkerino;
+        // Can be called externally: Return Match
+        userEvents.add(onMatchFound);
+        m.onCompletion(() -> userEvents.remove(onMatchFound));
+        m.onTimeout(() -> this.queueService.remove(user));
+        m.onError(ex -> this.queueService.remove(user));
+        return m;
     }
 
     @AsyncAction

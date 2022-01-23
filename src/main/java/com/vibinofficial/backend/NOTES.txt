@@ -1,0 +1,64 @@
+1. JOIN
+	-> Add to queue (Client->Hasura->Spring)
+	-> Upsert match table for user (Spring->Hasura)
+			match to null
+			active to true
+			accepted to null
+			lastActive to now()
+	-> Watch Matches (Client->Hasura)
+
+	-> On match (Spring)
+		-> Delete from Queue
+		-> Update matches in Hasura (Spring -> Hasura)
+				match to partner
+				lastActive to now()
+
+
+2. Accept
+	-> Update accepted to true (Client->Hasura->Spring)
+
+	Spring:
+		-> If match also accepted: create room
+		-> Delete rows of table for both users
+		-> Otherwise await partner or timeout
+
+3. Decline
+	-> Update accepted to false
+
+	Spring:
+		-> Mark active as false
+		-> Update match to active false
+
+
+TODO: accepted can only be updated if it is null
+
+In Spring every n time:
+	Update active where lastActive > 1 min and
+		me.partner.accepted == null || me.accepted == null
+	SET
+		active = false
+
+user | accepted | match | active | whenMatch
+ A		 T			B		T			TIME
+ B	  	 F			A	 	T			TIME
+ C	  	 NULL		D		F			TIME
+ D	  	 NULL		D		F			TIME
+
+
+ A		 T			B		T			TIME
+ B	  	 NULL		A	 	F			TIME
+
+
+4. Create Room
+
+Insert into rooms table + History table
+
+In Spring every n time:
+	Check if active rooms are inactive (checkTime > interval):
+		If so,
+			delete room from room table
+			Close room via twilio api
+		Else
+			Update checkTime for room
+
+user1 | user2 | room-id | lastCheckTime

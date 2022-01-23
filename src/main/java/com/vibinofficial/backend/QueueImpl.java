@@ -9,13 +9,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.stream.Collectors;
 
 @Data
 @Slf4j
 @Service
 public final class QueueImpl implements VibinQueue {
-    private final Object readLock = new Object();
 
     // Random Queue without any smart decisions, first user gets matched with second etc
     private final Queue<String> queue = new ConcurrentLinkedQueue<>();
@@ -28,27 +26,45 @@ public final class QueueImpl implements VibinQueue {
         } else {
             log.info("User joined the queue: {}", uid);
             this.queue.add(uid);
+            this.addMatchToTable();
         }
         log.info("End join");
+    }
+
+    private void addMatchToTable() {
+        // TODO
+    }
+
+    @Override
+    public void remove(final String uid) {
+        this.queue.remove(uid);
     }
 
     @Override
     @NonNull
     public Optional<QueueMatch> pollMatch() {
-        // Synchronizing and polling every 200 ms results in a noticeable delay (?)
         synchronized (this.queue) {
             final int size = this.queue.size();
-            List<String> shortenedQueueEntries = this.queue.stream().map(x -> x.substring(0, Math.min(x.length(), 4))).collect(Collectors.toList());
+            List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
             log.info("Queue size: {}: {}", size, shortenedQueueEntries);
-            if (size < 2) {
+
+            if (size >= 2) {
+                QueueMatch queueMatch = createQueueMatch();
+                return Optional.of(queueMatch);
+            } else {
                 return Optional.empty();
             }
 
-            final String user1 = this.queue.remove();
-            final String user2 = this.queue.remove();
-            final var s = this.queue.size();
-            log.info("Matching users: {}, {} ({})", user1, user2, s);
-            return Optional.of(QueueMatch.of(user1, user2));
         }
+    }
+
+    @NonNull
+    private QueueMatch createQueueMatch() {
+        final String user1 = this.queue.remove();
+        final String user2 = this.queue.remove();
+        final int s = this.queue.size();
+
+        log.info("Matched users: {}, {} ({} users remaining)", UidUtils.shorten(user1), UidUtils.shorten(user2), s);
+        return QueueMatch.of(user1, user2);
     }
 }
