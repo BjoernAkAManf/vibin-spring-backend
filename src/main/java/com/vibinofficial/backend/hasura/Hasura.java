@@ -3,7 +3,9 @@ package com.vibinofficial.backend.hasura;
 import com.jayway.jsonpath.TypeRef;
 import com.netflix.graphql.dgs.client.GraphQLResponse;
 import com.netflix.graphql.dgs.client.WebClientGraphQLClient;
+import com.vibinofficial.backend.hasura.graphql.GraphQLMutations;
 import com.vibinofficial.backend.hasura.graphql.GraphQLQueries;
+import com.vibinofficial.backend.hasura.graphql.GraphQLRunner;
 import com.vibinofficial.backend.keycloak.KeycloakUserLoginService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +32,10 @@ public class Hasura {
         //Configure a WebClient for your needs, e.g. including authentication headers and TLS.
         WebClientGraphQLClient client = createClient();
 
+        GraphQLResponse resp = GraphQLRunner.runMutation(GraphQLMutations.insertInitialUserMatch("uid string"), client);
+
         //The GraphQLResponse contains data and errors.
-        Mono<GraphQLResponse> responseMono = client.reactiveExecuteQuery(GraphQLQueries.ROOM_LIST);
+        Mono<GraphQLResponse> responseMono = GraphQLRunner.runQueryAsync(GraphQLQueries.ROOM_LIST, client);
 
         //GraphQLResponse has convenience methods to extract fields using JsonPath.
         List<Room> rooms = responseMono.map(this::extractRooms).block();
