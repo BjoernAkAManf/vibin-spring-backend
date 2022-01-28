@@ -1,19 +1,22 @@
 package com.vibinofficial.backend;
 
-import com.vibinofficial.backend.api.*;
+import com.vibinofficial.backend.api.QueueJoinResult;
+import com.vibinofficial.backend.api.RoomInfo;
+import com.vibinofficial.backend.hasura.Hasura;
 import com.vibinofficial.backend.twilio.VibinConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
-import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 import java.security.Principal;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -21,12 +24,23 @@ import java.util.function.Consumer;
 @RestController
 @RequestMapping(path = "/api")
 @RequiredArgsConstructor
-@EnableAsync // TODO remove?
 public class VibinController {
 
     private final VibinQueue queueService;
     private final VibinConfig config;
     private final Map<String, List<Consumer<String>>> events = new HashMap<>();
+    private final Hasura hasuraService;
+
+    @Scheduled(fixedDelay = 3, timeUnit = TimeUnit.SECONDS)
+    public void queryRoomList() {
+//        final var rooms = this.hasuraService
+//                .queryRoomList()
+//                .executeQuery(GraphQLQueries.ROOM_LIST)
+//                .map(this::extractRooms)
+//                .block();
+//
+//        logFoundRooms(rooms);
+    }
 
     @Scheduled(fixedRate = 1000, timeUnit = TimeUnit.MILLISECONDS)
     public void createPolling() {
@@ -36,51 +50,39 @@ public class VibinController {
         }
         final Optional<QueueMatch> queueMatch = this.queueService.pollMatch();
         queueMatch.ifPresent(this::dispatchMatchEvent);
+        // TODO fka insert into queue match table
     }
 
     private void dispatchMatchEvent(QueueMatch queueMatch) {
         final String user1 = queueMatch.getUser1();
         final String user2 = queueMatch.getUser2();
 
-        log.info("Dispatching Match {} with {}", user1, user2);
-        dispatchMatchEvent(user1, user2);
-        dispatchMatchEvent(user2, user1);
+        // 		-> Update matches in Hasura (Spring -> Hasura)
+        this.hasuraService.notifyMatch(user1, user2)
+                .doOnSubscribe(v -> log.info("Dispatching Match {} with {}", user1, user2))
+                .doOnError(ex -> log.error("Matching {} with {} failed", user1, user2, ex))
+                .subscribe();
     }
 
-    private void dispatchMatchEvent(final String user, final String match) {
-        Optional.ofNullable(this.events.get(user))
-                .flatMap(i -> i.stream().findFirst())
-                .ifPresentOrElse(
-                        (handler) -> {
-                            log.warn("Handlers: {}", this.events);
-                            log.warn("Handlers: {}", handler);
-                            handler.accept(match);
-                        },
-                        () -> log.warn("User Event scheduled, but has not yet joined: {}", user)
-                );
-    }
-
-    @ExceptionHandler(AsyncRequestTimeoutException.class)
-    public ResponseEntity<HasuraError> onTimeoutException(final AsyncRequestTimeoutException ex) {
-        log.info("some timeout occurred", ex);
-        // TODO remove on timeout, timestamp in queue?
-        return HasuraError.createResponse(HttpStatus.SC_REQUEST_TIMEOUT, ex);
-    }
-
-    @GetMapping("/queue/foo/{name}")
-    public DeferredResult<MatchInfo> joinQueue(final @PathVariable String name) {
-        return this.meow(name);
-    }
-
-    //    @Async
-    @PostMapping("/queue/join")
-    @AsyncAction
-    public DeferredResult<MatchInfo> joinQueue(final Principal principal) {
+    @PostMapping("/match/accept")
+    // TODO: Type obv. wrong-ish
+    public Mono<QueueJoinResult> matchAccept(final Principal principal) {
         final String user = principal.getName();
-        return meow(user);
+        log.info("Match Accepted: {}", user);
+        return Mono.just(QueueJoinResult.SUCCESS);
     }
 
-    private DeferredResult<MatchInfo> meow(String user) {
+    @PostMapping("/match/decline")
+    public Mono<QueueJoinResult> matchDecline(final Principal principal) {
+        final String user = principal.getName();
+        log.info("Match Declined: {}", user);
+        return Mono.just(QueueJoinResult.SUCCESS);
+    }
+
+    @PostMapping("/queue/join")
+    public Mono<QueueJoinResult> joinQueue(final Principal principal) {
+        // TODO: IF user has current match, set that match to active = false
+        final String user = principal.getName();
         log.info("joining queue POST: {}", user);
         // Add to Queue
         this.queueService.join(user);
@@ -89,27 +91,11 @@ public class VibinController {
         // TODO: Check Blocklist
         // TODO: Check TMP Blocklist (Mismatches do not get rematched until a cool off period)
 
-        // wait until we have a partner
-        log.info("Creating sink");
-        final DeferredResult<MatchInfo> m = new DeferredResult<>();
-        this.events.computeIfAbsent(user, k -> new ArrayList<>());
-        final List<Consumer<String>> userEvents = this.events.computeIfAbsent(user, k -> new ArrayList<>());
-        final Consumer<String> onMatchFound = match -> m.setResult(
-                MatchInfo.builder()
-                        .matchUserId(match)
-                        .matchToken("my-token-" + user)
-                        .build()
-        );
-
-        // Can be called externally: Return Match
-        userEvents.add(onMatchFound);
-        m.onCompletion(() -> userEvents.remove(onMatchFound));
-        m.onTimeout(() -> this.queueService.remove(user));
-        m.onError(ex -> this.queueService.remove(user));
-        return m;
+        return this.hasuraService.createInitialMatchEntry(user)
+                .map(v -> QueueJoinResult.SUCCESS)
+                .onErrorReturn(QueueJoinResult.ERROR);
     }
 
-    @AsyncAction
     public RoomInfo syncMatch(final Principal principal) {
         // IF you already accepted
         //    await Partner response
@@ -131,12 +117,10 @@ public class VibinController {
                 .build();
     }
 
-    @SyncAction
     public void respondToMatch(final Principal principal, final String token, final boolean accept) {
         final String uid = principal.getName();
         // Server notifies waiting clients in syncRoom.
     }
-
     // TODO: If any party does not join a room within x minutes after a successful match, complete room automatically
     // TODO: If any party leaves a room permanently (in contrast to closing the window) complete room automatically
 }

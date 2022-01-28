@@ -20,7 +20,7 @@ keycloak:
 spring:
   mvc:
     async:
-      # 5 Minutes inactivity kills an async request
+      # Amount of time before asynchronous request handling times out.
       request-timeout: 10000
 
 vibin:

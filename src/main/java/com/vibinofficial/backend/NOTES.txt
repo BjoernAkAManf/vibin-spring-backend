@@ -1,11 +1,11 @@
 1. JOIN
-	-> Add to queue (Client->Hasura->Spring)
-	-> Upsert match table for user (Spring->Hasura)
+	-> Add to queue (Client->Hasura->Spring)                [done]
+	-> Upsert match table for user (Spring->Hasura)         [done]
 			match to null
 			active to true
 			accepted to null
 			lastActive to now()
-	-> Watch Matches (Client->Hasura)
+	-> Watch Matches (Client->Hasura)                       [TODO]
 
 	-> On match (Spring)
 		-> Delete from Queue

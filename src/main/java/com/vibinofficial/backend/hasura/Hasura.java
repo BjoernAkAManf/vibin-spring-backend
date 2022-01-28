@@ -2,60 +2,44 @@ package com.vibinofficial.backend.hasura;
 
 import com.jayway.jsonpath.TypeRef;
 import com.netflix.graphql.dgs.client.GraphQLResponse;
-import com.netflix.graphql.dgs.client.WebClientGraphQLClient;
 import com.vibinofficial.backend.hasura.graphql.GraphQLMutations;
 import com.vibinofficial.backend.hasura.graphql.GraphQLQueries;
-import com.vibinofficial.backend.hasura.graphql.GraphQLRunner;
-import com.vibinofficial.backend.keycloak.KeycloakUserLoginService;
+import com.vibinofficial.backend.hasura.graphql.QClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.NonNull;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class Hasura {
-    private final HasuraConfig config;
-    private final KeycloakUserLoginService keycloak;
+    private final QClient client;
 
-    @Scheduled(fixedDelay = 3, timeUnit = TimeUnit.SECONDS)
     public void queryRoomList() {
-        //Configure a WebClient for your needs, e.g. including authentication headers and TLS.
-        WebClientGraphQLClient client = createClient();
-
-        GraphQLResponse resp = GraphQLRunner.runMutation(GraphQLMutations.insertInitialUserMatch("uid string"), client);
-
-        //The GraphQLResponse contains data and errors.
-        Mono<GraphQLResponse> responseMono = GraphQLRunner.runQueryAsync(GraphQLQueries.ROOM_LIST, client);
-
-        //GraphQLResponse has convenience methods to extract fields using JsonPath.
-        List<Room> rooms = responseMono.map(this::extractRooms).block();
+        final var rooms = this.client
+                .executeQuery(GraphQLQueries.ROOM_LIST)
+                .map(this::extractRooms)
+                .block();
 
         logFoundRooms(rooms);
     }
 
-    @NonNull
-    private WebClientGraphQLClient createClient() {
-        return new WebClientGraphQLClient(
-                WebClient.create(this.config.getHost()),
-                headers -> {
-                    try {
-                        headers.add("Authorization", "Bearer " + this.keycloak.getAuthToken());
-                        headers.add("X-Hasura-Role", "backend");
-                    } catch (final IOException ex) {
-                        throw new UncheckedIOException(ex);
-                    }
-                }
-        );
+    public Mono<GraphQLResponse> createInitialMatchEntry(String user) {
+        return this.client
+                .executeMutation(GraphQLMutations.INSERT_INITIAL_USER_MATCH_ENTRY, Map.of("user", user));
+    }
+
+    public Mono<GraphQLResponse> notifyMatch(String user1, String user2) {
+        // TODO: assert both users have been updated (once)
+        return this.client
+                .executeMutation(GraphQLMutations.UPDATE_WITH_MATCH, Map.of(
+                        "user1", user1,
+                        "user2", user2
+                ));
     }
 
     private List<Room> extractRooms(GraphQLResponse r) {
