@@ -1,13 +1,17 @@
 package com.vibinofficial.backend;
 
+import com.netflix.graphql.dgs.client.GraphQLResponse;
 import com.vibinofficial.backend.api.QueueJoinResult;
 import com.vibinofficial.backend.api.RoomInfo;
 import com.vibinofficial.backend.hasura.Hasura;
+import com.vibinofficial.backend.hasura.HasuraBody;
 import com.vibinofficial.backend.twilio.VibinConfig;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
@@ -58,7 +62,7 @@ public class VibinController {
         final String user2 = queueMatch.getUser2();
 
         // 		-> Update matches in Hasura (Spring -> Hasura)
-        this.hasuraService.notifyMatch(user1, user2)
+        this.hasuraService.notifyMatch(queueMatch)
                 .doOnSubscribe(v -> log.info("Dispatching Match {} with {}", user1, user2))
                 .doOnError(ex -> log.error("Matching {} with {} failed", user1, user2, ex))
                 .subscribe();
@@ -69,14 +73,42 @@ public class VibinController {
     public Mono<QueueJoinResult> matchAccept(final Principal principal) {
         final String user = principal.getName();
         log.info("Match Accepted: {}", user);
-        return Mono.just(QueueJoinResult.SUCCESS);
+
+        return this.hasuraService.acceptMatch(user)
+                .doOnError(ex -> log.error("Accepting match ({} with partner {}) failed.", user, "TODO", ex))
+                .map(v -> QueueJoinResult.SUCCESS)
+                .onErrorReturn(QueueJoinResult.ERROR);
+    }
+
+    @Data
+    static class MatchInput {
+        private String partner;
     }
 
     @PostMapping("/match/decline")
-    public Mono<QueueJoinResult> matchDecline(final Principal principal) {
+    public Mono<QueueJoinResult> matchDecline(final Principal principal, @RequestBody final HasuraBody<MatchInput> body) {
         final String user = principal.getName();
-        log.info("Match Declined: {}", user);
-        return Mono.just(QueueJoinResult.SUCCESS);
+        final String partner = body.getInput().getPartner();
+        log.info("Match Declined: {} with {}", user, partner);
+
+        return this.hasuraService.declineMatch(user, partner)
+                .doOnError(ex -> log.error("Declining match ({} with partner {}) failed.", user, partner, ex))
+                .map(v -> this.foo(v, user, partner))
+                .onErrorReturn(QueueJoinResult.ERROR);
+    }
+
+    private QueueJoinResult foo(GraphQLResponse foo, final String user, final String match) {
+        // REALLY THROW ERROR PLS
+        if (foo.hasErrors()) {
+            log.error("Decline failed: {}", foo.getErrors());
+            return QueueJoinResult.ERROR;
+        }
+        final var rows = foo.extractValueAsObject("self.affected_values", Integer.class);
+        if (rows != 1) {
+            log.error("Superficial Decline ({}): {} has no such match: {}", rows, user, match);
+            return QueueJoinResult.ERROR;
+        }
+        return QueueJoinResult.SUCCESS;
     }
 
     @PostMapping("/queue/join")

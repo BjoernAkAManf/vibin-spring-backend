@@ -2,6 +2,7 @@ package com.vibinofficial.backend.hasura;
 
 import com.jayway.jsonpath.TypeRef;
 import com.netflix.graphql.dgs.client.GraphQLResponse;
+import com.vibinofficial.backend.QueueMatch;
 import com.vibinofficial.backend.hasura.graphql.GraphQLMutations;
 import com.vibinofficial.backend.hasura.graphql.GraphQLQueries;
 import com.vibinofficial.backend.hasura.graphql.QClient;
@@ -33,13 +34,30 @@ public class Hasura {
                 .executeMutation(GraphQLMutations.INSERT_INITIAL_USER_MATCH_ENTRY, Map.of("user", user));
     }
 
-    public Mono<GraphQLResponse> notifyMatch(String user1, String user2) {
+    public Mono<GraphQLResponse> notifyMatch(QueueMatch queueMatch) {
+        String user1 = queueMatch.getUser1();
+        String user2 = queueMatch.getUser2();
+
         // TODO: assert both users have been updated (once)
         return this.client
                 .executeMutation(GraphQLMutations.UPDATE_WITH_MATCH, Map.of(
                         "user1", user1,
                         "user2", user2
                 ));
+    }
+
+    public Mono<GraphQLResponse> acceptMatch(String acceptingUser) {
+        return this.client.executeMutation(
+                GraphQLMutations.ACCEPT_MATCH,
+                Map.of("acceptingUser", acceptingUser)
+        );
+    }
+
+    public Mono<GraphQLResponse> declineMatch(String decliningUser, String partnerUser) {
+        return this.client.executeMutation(
+                GraphQLMutations.DECLINE_MATCH,
+                Map.of("decliningUser", decliningUser, "partnerUser", partnerUser)
+        );
     }
 
     private List<Room> extractRooms(GraphQLResponse r) {
