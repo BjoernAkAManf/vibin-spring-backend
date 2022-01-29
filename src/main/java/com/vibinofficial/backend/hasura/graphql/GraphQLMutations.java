@@ -16,7 +16,7 @@ public class GraphQLMutations {
             "    objects: {" +
             "      user: $user," +
             "      active: true," +
-            "      accepted: false," +
+            "      accepted: null," +
             "      partner: null," +
             "      match_time: null" +
             "    }," +
@@ -26,7 +26,6 @@ public class GraphQLMutations {
             "    affected_rows" +
             "  }" +
             "}";
-    ;
 
     public static final String UPDATE_WITH_MATCH = "mutation " +
             "SetMatch($user1: uuid!, $user2: uuid!) { " +
@@ -38,7 +37,7 @@ public class GraphQLMutations {
             "      partner: $user2, " +
             "      match_time: \"now()\", " +
             "      active: true, " +
-            "      accepted: false " +
+            "      accepted: null " +
             "    } " +
             "  ) {affected_rows} " +
             " " +
@@ -50,7 +49,7 @@ public class GraphQLMutations {
             "      partner: $user1, " +
             "      match_time: \"now()\", " +
             "      active: true, " +
-            "      accepted: false " +
+            "      accepted: null " +
             "    } " +
             "  ) {affected_rows} " +
             "}";
