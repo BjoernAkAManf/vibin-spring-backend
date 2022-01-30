@@ -56,7 +56,11 @@ public class GraphQLMutations {
     public static final String ACCEPT_MATCH = "mutation " +
             "AcceptMatch($acceptingUser: uuid!) {" +
             "  update_queue_matches(" +
-            "    where: {user: {_eq: $acceptingUser}}, " +
+            "    where: { _and: [" +
+            "      { user: {_eq: $acceptingUser} }," +
+           "       { partner: {_is_null: false} }," +
+           "       { accepted: {_is_null: true} }" +
+            "    ]}, " +
             "    _set: {accepted: true}" +
             "  ) {" +
             "    affected_rows" +
@@ -83,6 +87,13 @@ public class GraphQLMutations {
             "      ]" +
             "    }" +
             "  ) {" +
+            "    affected_rows" +
+            "  }" +
+            "}";
+
+    public static final String DELETE_QUEUE_ENTRY = "mutation " +
+            "DeleteQueueEntry($user: uuid!) {" +
+            "  delete_queue_matches(where: {user: {_eq: $user}}) {" +
             "    affected_rows" +
             "  }" +
             "}";

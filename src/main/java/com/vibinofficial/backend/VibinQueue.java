@@ -10,11 +10,18 @@ import java.util.Optional;
 public interface VibinQueue {
 
     /**
-     * Called whenever a given User wants to join a call.
+     * Called whenever a given User wants to join the queue.
      *
      * @param uid User ID
      */
     void join(String uid);
+
+    /**
+     * Called whenever a given User wants to leave the queue.
+     *
+     * @param uid User ID
+     */
+    void leave(String uid);
 
     /**
      * Called whenever a given User no longer wants to join a call.

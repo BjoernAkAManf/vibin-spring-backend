@@ -26,13 +26,20 @@ public final class QueueImpl implements VibinQueue {
         } else {
             log.info("User joined the queue: {}", uid);
             this.queue.add(uid);
-            this.addMatchToTable();
         }
         log.info("End join");
     }
 
-    private void addMatchToTable() {
-        // TODO
+    @Override
+    public void leave(String uid) {
+        log.info("Begin leave");
+        if (!this.queue.contains(uid)) {
+            log.info("User was not in queue: {}", uid);
+        } else {
+            log.info("User left the queue: {}", uid);
+            this.queue.remove(uid);
+        }
+        log.info("End leave");
     }
 
     @Override

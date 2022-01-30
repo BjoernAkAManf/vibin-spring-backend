@@ -17,10 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -76,7 +73,7 @@ public class VibinController {
 
         return this.hasuraService.acceptMatch(user)
                 .doOnError(ex -> log.error("Accepting match ({} with partner {}) failed.", user, "TODO", ex))
-                .map(v -> QueueJoinResult.SUCCESS)
+                .map(v -> checkAcceptResult(v, user))
                 .onErrorReturn(QueueJoinResult.ERROR);
     }
 
@@ -93,29 +90,45 @@ public class VibinController {
 
         return this.hasuraService.declineMatch(user, partner)
                 .doOnError(ex -> log.error("Declining match ({} with partner {}) failed.", user, partner, ex))
-                .map(v -> this.foo(v, user, partner))
+                .map(v -> this.checkDeclineResult(v, user, partner))
                 .onErrorReturn(QueueJoinResult.ERROR);
     }
 
-    private QueueJoinResult foo(GraphQLResponse foo, final String user, final String match) {
+    private QueueJoinResult checkAcceptResult(GraphQLResponse response, final String user) {
         // REALLY THROW ERROR PLS
-        if (foo.hasErrors()) {
-            log.error("Decline failed: {}", foo.getErrors());
+        if (response.hasErrors()) {
+            log.error("Accept failed: {}", response.getErrors());
             return QueueJoinResult.ERROR;
         }
-        final var rows = foo.extractValueAsObject("self.affected_values", Integer.class);
-        if (rows != 1) {
-            log.error("Superficial Decline ({}): {} has no such match: {}", rows, user, match);
+
+        Integer affectedRows = response.extractValueAsObject("update_queue_matches.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows, 1)) {
+            log.error("Superficial Accept ({}): {} could not accept.", affectedRows, user);
+            return QueueJoinResult.ERROR;
+        }
+        return QueueJoinResult.SUCCESS;
+    }
+
+    private QueueJoinResult checkDeclineResult(GraphQLResponse response, String user, String match) {
+        // REALLY THROW ERROR PLS
+        if (response.hasErrors()) {
+            log.error("Decline failed: {}", response.getErrors());
+            return QueueJoinResult.ERROR;
+        }
+
+        Integer affectedRows = response.extractValueAsObject("self.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows, 1)) {
+            log.error("Superficial Decline ({}): {} has no such match: {}", affectedRows, user, match);
             return QueueJoinResult.ERROR;
         }
         return QueueJoinResult.SUCCESS;
     }
 
     @PostMapping("/queue/join")
-    public Mono<QueueJoinResult> joinQueue(final Principal principal) {
+    public Mono<QueueJoinResult> joinQueue(Principal principal) {
         // TODO: IF user has current match, set that match to active = false
         final String user = principal.getName();
-        log.info("joining queue POST: {}", user);
+        log.info("joining queue: {}", user);
         // Add to Queue
         this.queueService.join(user);
 
@@ -126,6 +139,31 @@ public class VibinController {
         return this.hasuraService.createInitialMatchEntry(user)
                 .map(v -> QueueJoinResult.SUCCESS)
                 .onErrorReturn(QueueJoinResult.ERROR);
+    }
+
+    @PostMapping("/queue/leave")
+    public Mono<QueueJoinResult> leaveQueue(Principal principal) {
+        final String user = principal.getName();
+        log.info("leaving queue: {}", user);
+        this.queueService.leave(user);
+
+        return this.hasuraService.deleteQueueEntry(user)
+                .map(v -> checkDeleteResult(v, user))
+                .onErrorReturn(QueueJoinResult.ERROR);
+    }
+
+    private QueueJoinResult checkDeleteResult(GraphQLResponse response, String user) {
+        if (response.hasErrors()) {
+            log.error("Delete failed: {}", response.getErrors());
+            return QueueJoinResult.ERROR;
+        }
+
+        Integer affectedRows = response.extractValueAsObject("delete_queue_matches.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows, 1)) {
+            log.error("Superficial delete ({}): {} has no such queue entry.", affectedRows, user);
+            return QueueJoinResult.ERROR;
+        }
+        return QueueJoinResult.SUCCESS;
     }
 
     public RoomInfo syncMatch(final Principal principal) {
