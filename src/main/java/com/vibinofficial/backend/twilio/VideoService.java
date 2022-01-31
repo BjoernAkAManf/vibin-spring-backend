@@ -2,7 +2,6 @@ package com.vibinofficial.backend.twilio;
 
 import com.twilio.Twilio;
 import com.twilio.jwt.accesstoken.AccessToken;
-import com.twilio.jwt.accesstoken.VideoGrant;
 import com.twilio.rest.video.v1.Room;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -27,21 +26,19 @@ public class VideoService {
         Twilio.init(this.config.getKey(), this.config.getToken());
     }
 
-    public void createRoomForMatch(String user1, String user2) {
+    public RoomGrants createRoomForMatch(String user1, String user2) {
         if (!this.config.isEnabled()) {
             throw new UnsupportedOperationException();
         }
 
-        // TODO old strings: "meow", "foo"
+        log.info("VidService Config: {}", config);
         Room room = Room.creator().create();
         String roomSid = room.getSid();
 
-        // TODO move in config
-        AccessToken.Builder grantBuilder = new AccessToken.Builder(this.config.getAccount(), this.config.getKey(), this.config.getToken())
-                .grant(new VideoGrant().setRoom(roomSid));
-
+        AccessToken.Builder grantBuilder = config.getGrantBuilder(roomSid);
         String grantUser1 = grantBuilder.identity(user1).build().toJwt();
         String grantUser2 = grantBuilder.identity(user2).build().toJwt();
 
+        return new RoomGrants(roomSid, user1, user2, grantUser1, grantUser2);
     }
 }

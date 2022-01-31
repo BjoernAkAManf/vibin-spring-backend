@@ -25,9 +25,9 @@ spring:
 
 vibin:
   enabled: true
-  token: "twilio-example-token"
-  account: "twilio-example-account"
-  key: "twilio-example-key"
+  token: "Mesud1UHCBi3DWDNceztvxsnzX8frl0i"
+  account: "AC7eb55afa42f9ccb4ca0c3f1b81d024c2"
+  key: "SK0055386c2f9acc72c7eccb1138641f1c"
 
   # Configures the Keycloak User managed by this server
   backend:

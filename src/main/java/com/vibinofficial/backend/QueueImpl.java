@@ -72,6 +72,6 @@ public final class QueueImpl implements VibinQueue {
         final int s = this.queue.size();
 
         log.info("Matched users: {}, {} ({} users remaining)", UidUtils.shorten(user1), UidUtils.shorten(user2), s);
-        return QueueMatch.of(user1, user2);
+        return new QueueMatch(user1, user2);
     }
 }

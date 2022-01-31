@@ -14,4 +14,12 @@ public class GraphQLQueries {
             "    last_check" +
             "  }" +
             "}";
+
+    public static final String MATCHES_READY = "query " +
+            "GetMatchesReady {" +
+            "  queue_matches_ready {" +
+            "    user" +
+            "    partner" +
+            "  }" +
+            "}";
 }

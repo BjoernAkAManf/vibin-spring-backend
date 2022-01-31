@@ -5,7 +5,9 @@ import com.vibinofficial.backend.api.QueueJoinResult;
 import com.vibinofficial.backend.api.RoomInfo;
 import com.vibinofficial.backend.hasura.Hasura;
 import com.vibinofficial.backend.hasura.HasuraBody;
+import com.vibinofficial.backend.twilio.RoomGrants;
 import com.vibinofficial.backend.twilio.VibinConfig;
+import com.vibinofficial.backend.twilio.VideoService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ import java.security.Principal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -28,6 +31,7 @@ import java.util.function.Consumer;
 public class VibinController {
 
     private final VibinQueue queueService;
+    private final VideoService videoService;
     private final VibinConfig config;
     private final Map<String, List<Consumer<String>>> events = new HashMap<>();
     private final Hasura hasuraService;
@@ -41,6 +45,32 @@ public class VibinController {
 //                .block();
 //
 //        logFoundRooms(rooms);
+    }
+
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
+    public void createRooms() {
+        log.info("Checking for needed rooms");
+        List<QueueMatch> matchesReady = this.hasuraService.queryMatchesReady().block(); // TODO fka use Flux.then
+
+        if (matchesReady == null) {
+            log.error("queryMatchesReady returned null!");
+            return;
+        }
+
+        log.info("Matches needing rooms: {}", matchesReady.size());
+        var collect = matchesReady.stream().map(this::createRoom).collect(Collectors.toList());
+        // TODO on any error/affectedrows!=1 set matches inactive
+    }
+
+    private Mono<GraphQLResponse> createRoom(QueueMatch match) {
+        RoomGrants roomGrants = videoService.createRoomForMatch(match.getLexSmallerUser(), match.getLexGreaterUser());
+
+        return this.hasuraService.insertRoomEntry(roomGrants); // TODO WIP
+        // createRoom(match){
+        //      var roomid = twilio.createRoom();
+        //      hasura.insertRoomToTable(match, roomid, accessTokens)
+        //      hasura.insertRoomToMatch(match, roomid)
+        // }
     }
 
     @Scheduled(fixedRate = 1000, timeUnit = TimeUnit.MILLISECONDS)
