@@ -26,8 +26,15 @@ public final class QueueImpl implements VibinQueue {
         } else {
             log.info("User joined the queue: {}", uid);
             this.queue.add(uid);
+
+            logQueue();
         }
         log.info("End join");
+    }
+
+    private void logQueue() {
+        List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
+        log.info("Queue size: {}: {}", this.queue.size(), shortenedQueueEntries);
     }
 
     @Override
@@ -38,6 +45,8 @@ public final class QueueImpl implements VibinQueue {
         } else {
             log.info("User left the queue: {}", uid);
             this.queue.remove(uid);
+
+            logQueue();
         }
         log.info("End leave");
     }
@@ -52,8 +61,6 @@ public final class QueueImpl implements VibinQueue {
     public Optional<QueueMatch> pollMatch() {
         synchronized (this.queue) {
             final int size = this.queue.size();
-            List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
-            log.info("Queue size: {}: {}", size, shortenedQueueEntries);
 
             if (size >= 2) {
                 QueueMatch queueMatch = createQueueMatch();

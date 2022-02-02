@@ -3,6 +3,7 @@ package com.vibinofficial.backend;
 import com.netflix.graphql.dgs.client.GraphQLResponse;
 import com.vibinofficial.backend.api.QueueJoinResult;
 import com.vibinofficial.backend.api.RoomInfo;
+import com.vibinofficial.backend.hasura.GraphQlExceptions;
 import com.vibinofficial.backend.hasura.Hasura;
 import com.vibinofficial.backend.hasura.HasuraBody;
 import com.vibinofficial.backend.twilio.RoomGrants;
@@ -22,7 +23,6 @@ import java.security.Principal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -39,6 +39,7 @@ public class VibinController {
     @Scheduled(fixedDelay = 3, timeUnit = TimeUnit.SECONDS)
     public void queryRoomList() {
 //        final var rooms = this.hasuraService
+//                .map(GraphQlExceptions::checkResult)
 //                .queryRoomList()
 //                .executeQuery(GraphQLQueries.ROOM_LIST)
 //                .map(this::extractRooms)
@@ -50,27 +51,46 @@ public class VibinController {
     @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
     public void createRooms() {
         log.info("Checking for needed rooms");
-        List<QueueMatch> matchesReady = this.hasuraService.queryMatchesReady().block(); // TODO fka use Flux.then
 
-        if (matchesReady == null) {
-            log.error("queryMatchesReady returned null!");
-            return;
-        }
-
-        log.info("Matches needing rooms: {}", matchesReady.size());
-        var collect = matchesReady.stream().map(this::createRoom).collect(Collectors.toList());
-        // TODO on any error/affectedrows!=1 set matches inactive
+        this.hasuraService
+                .queryMatchesReady()
+                .flatMap(this::createRoom)
+                .blockLast();
     }
 
     private Mono<GraphQLResponse> createRoom(QueueMatch match) {
         RoomGrants roomGrants = videoService.createRoomForMatch(match.getLexSmallerUser(), match.getLexGreaterUser());
 
-        return this.hasuraService.insertRoomEntry(roomGrants); // TODO WIP
-        // createRoom(match){
-        //      var roomid = twilio.createRoom();
-        //      hasura.insertRoomToTable(match, roomid, accessTokens)
-        //      hasura.insertRoomToMatch(match, roomid)
-        // }
+        return this.hasuraService
+                .insertRoomEntry(roomGrants)
+                .map(GraphQlExceptions::checkResult)
+                .map(response -> checkRoomResult(response, match))
+                .doOnError(ex -> log.error("Error creating a room for {}/{}", match.getLexSmallerUser(), match.getLexGreaterUser(), ex));
+        // TODO on error: cancel queue -> set active false and delete other entries
+    }
+
+    private GraphQLResponse checkRoomResult(GraphQLResponse response, QueueMatch match) {
+        Integer affectedRows_match1 = response.extractValueAsObject("match1.affected_rows", Integer.class);
+        Integer affectedRows_match2 = response.extractValueAsObject("match2.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows_match1, 1) || !Objects.equals(affectedRows_match2, 1)) {
+            String msg = String.format("Could not update room for match (%s, %s)", match.getLexSmallerUser(), match.getLexGreaterUser());
+            throw new IllegalStateException(msg);
+        }
+
+        Integer affectedRows_auth1 = response.extractValueAsObject("room_auth1.affected_rows", Integer.class);
+        Integer affectedRows_auth2 = response.extractValueAsObject("room_auth2.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows_auth1, 1) || !Objects.equals(affectedRows_auth2, 1)) {
+            String msg = String.format("Could not update room_auth for match (%s, %s)", match.getLexSmallerUser(), match.getLexGreaterUser());
+            throw new IllegalStateException(msg);
+        }
+
+        Integer affectedRows_list = response.extractValueAsObject("room_list.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows_list, 1)) {
+            String msg = String.format("Could not update room_list for match (%s, %s)", match.getLexSmallerUser(), match.getLexGreaterUser());
+            throw new IllegalStateException(msg);
+        }
+
+        return response;
     }
 
     @Scheduled(fixedRate = 1000, timeUnit = TimeUnit.MILLISECONDS)
@@ -90,10 +110,25 @@ public class VibinController {
 
         // 		-> Update matches in Hasura (Spring -> Hasura)
         this.hasuraService.notifyMatch(queueMatch)
+                .map(GraphQlExceptions::checkResult)
+                .map(x -> checkMatchUpdate(x, user1, user2))
                 .doOnSubscribe(v -> log.info("Dispatching Match {} with {}", user1, user2))
                 .doOnError(ex -> log.error("Matching {} with {} failed", user1, user2, ex))
                 .subscribe();
     }
+
+    private GraphQLResponse checkMatchUpdate(GraphQLResponse response, String user1, String user2) {
+
+        Integer affectedRows1 = response.extractValueAsObject("user1.affected_rows", Integer.class);
+        Integer affectedRows2 = response.extractValueAsObject("user2.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows1, 1) || !Objects.equals(affectedRows2, 1)) {
+            String msg = String.format("Unknown error, could not update match for users %s, %s (%s, %s)",
+                    user1, user2, affectedRows1, affectedRows2);
+            throw new IllegalStateException(msg);
+        }
+        return response;
+    }
+
 
     @PostMapping("/match/accept")
     // TODO: Type obv. wrong-ish
@@ -102,13 +137,15 @@ public class VibinController {
         log.info("Match Accepted: {}", user);
 
         return this.hasuraService.acceptMatch(user)
-                .doOnError(ex -> log.error("Accepting match ({} with partner {}) failed.", user, "TODO", ex))
+                .map(GraphQlExceptions::checkResult)
                 .map(v -> checkAcceptResult(v, user))
+                .doOnError(ex -> log.error("Accepting match ({} with partner {}) failed.", user, "TODO", ex))
                 .onErrorReturn(QueueJoinResult.ERROR);
     }
 
     @Data
     static class MatchInput {
+        // TODO do same for affected rows and other jsons
         private String partner;
     }
 
@@ -119,18 +156,13 @@ public class VibinController {
         log.info("Match Declined: {} with {}", user, partner);
 
         return this.hasuraService.declineMatch(user, partner)
-                .doOnError(ex -> log.error("Declining match ({} with partner {}) failed.", user, partner, ex))
+                .map(GraphQlExceptions::checkResult)
                 .map(v -> this.checkDeclineResult(v, user, partner))
+                .doOnError(ex -> log.error("Declining match ({} with partner {}) failed.", user, partner, ex))
                 .onErrorReturn(QueueJoinResult.ERROR);
     }
 
     private QueueJoinResult checkAcceptResult(GraphQLResponse response, final String user) {
-        // REALLY THROW ERROR PLS
-        if (response.hasErrors()) {
-            log.error("Accept failed: {}", response.getErrors());
-            return QueueJoinResult.ERROR;
-        }
-
         Integer affectedRows = response.extractValueAsObject("update_queue_matches.affected_rows", Integer.class);
         if (!Objects.equals(affectedRows, 1)) {
             log.error("Superficial Accept ({}): {} could not accept.", affectedRows, user);
@@ -159,35 +191,41 @@ public class VibinController {
         // TODO: IF user has current match, set that match to active = false
         final String user = principal.getName();
         log.info("joining queue: {}", user);
-        // Add to Queue
-        this.queueService.join(user);
-
         // TODO: Check Criteria list (e.g. Language; Interest, if applicable)
         // TODO: Check Blocklist
         // TODO: Check TMP Blocklist (Mismatches do not get rematched until a cool off period)
 
         return this.hasuraService.createInitialMatchEntry(user)
-                .map(v -> QueueJoinResult.SUCCESS)
-                .onErrorReturn(QueueJoinResult.ERROR);
+                .map(GraphQlExceptions::checkResult)
+                .map(v -> checkQueueJoin(v, user))
+                .doOnError(ex -> log.error("Error while storing queue join ({}).", user, ex))
+                .onErrorReturn(QueueJoinResult.ERROR)
+                .doOnSuccess((r) -> this.queueService.join(user));
+    }
+
+    private QueueJoinResult checkQueueJoin(GraphQLResponse response, String user) {
+        Integer affectedRows = response.extractValueAsObject("insert_queue_matches.affected_rows", Integer.class);
+        if (!Objects.equals(affectedRows, 1)) {
+            String msg = String.format("Could not update queue_match for user %s (%s)", user, affectedRows);
+            throw new IllegalStateException(msg);
+        }
+        return QueueJoinResult.SUCCESS;
     }
 
     @PostMapping("/queue/leave")
     public Mono<QueueJoinResult> leaveQueue(Principal principal) {
         final String user = principal.getName();
         log.info("leaving queue: {}", user);
-        this.queueService.leave(user);
 
         return this.hasuraService.deleteQueueEntry(user)
+                .map(GraphQlExceptions::checkResult)
                 .map(v -> checkDeleteResult(v, user))
-                .onErrorReturn(QueueJoinResult.ERROR);
+                .doOnError(ex -> log.error("Leaving queue failed for user {}.", user, ex))
+                .onErrorReturn(QueueJoinResult.ERROR)
+                .doOnSubscribe((r) -> this.queueService.leave(user));
     }
 
     private QueueJoinResult checkDeleteResult(GraphQLResponse response, String user) {
-        if (response.hasErrors()) {
-            log.error("Delete failed: {}", response.getErrors());
-            return QueueJoinResult.ERROR;
-        }
-
         Integer affectedRows = response.extractValueAsObject("delete_queue_matches.affected_rows", Integer.class);
         if (!Objects.equals(affectedRows, 1)) {
             log.error("Superficial delete ({}): {} has no such queue entry.", affectedRows, user);

@@ -10,6 +10,7 @@ import com.vibinofficial.backend.twilio.RoomGrants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -31,10 +32,11 @@ public class Hasura {
         logFoundRooms(rooms);
     }
 
-    public Mono<List<QueueMatch>> queryMatchesReady() {
+    public Flux<QueueMatch> queryMatchesReady() {
         return this.client
                 .executeQuery(GraphQLQueries.MATCHES_READY)
-                .map(this::extractMatchesReady);
+                .map(this::extractMatchesReady)
+                .flatMapMany(Flux::fromIterable);
     }
 
     public Mono<GraphQLResponse> createInitialMatchEntry(String user) {
@@ -108,8 +110,8 @@ public class Hasura {
                 Map.of("user1", roomGrants.getUser1(),
                         "user2", roomGrants.getUser2(),
                         "room", roomGrants.getRoomSid(),
-                        "$room_grant1", roomGrants.getGrantUser1(),
-                        "$room_grant2", roomGrants.getGrantUser2()));
+                        "room_grant1", roomGrants.getGrantUser1(),
+                        "room_grant2", roomGrants.getGrantUser2()));
         // todo insert into queuematches: user=user1, partner=user2, room=roomId
         // todo insert into queuematches: user=user2, partner=user1, room=roomId
         // todo insert rooms: user1=user1, user2=user2, room=roomId, grant1=grant1, grant2=grant2

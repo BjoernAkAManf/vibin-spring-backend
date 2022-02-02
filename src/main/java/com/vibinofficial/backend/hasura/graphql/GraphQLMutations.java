@@ -18,12 +18,11 @@ public class GraphQLMutations {
             "      accepted: null," +
             "      partner: null," +
             "      match_time: null," +
-            "      room: null," +
-            "      room_grant: null" +
+            "      room: null" +
             "    }," +
             "    on_conflict: {" +
             "      constraint: queue_matches_pkey," +
-            "      update_columns: [accepted, active, partner, match_time, room, room_grant]" +
+            "      update_columns: [accepted, active, partner, match_time, room]" +
             "    }) {" +
             "    affected_rows" +
             "  }" +
@@ -102,32 +101,46 @@ public class GraphQLMutations {
 
     /** Make sure to double-check that user1 < user2! */
     public static final String SET_ROOM_INFO = "mutation " +
-            "SetRoomInfo($user1: uuid!, $user2: uuid!, $room: uuid!, $room_grant1: String!, $room_grant2: String!) {" +
+            "SetRoomInfo(" +
+            "  $user1: uuid!, $user2: uuid!, $room: String!, $room_grant1: String!, $room_grant2: String!" +
+            ") {" +
             "  match1: update_queue_matches(" +
-            "    where: { _and: [ " +
+            "    where: { _and: [" +
             "      { user: {_eq: $user1} }," +
             "      { partner: {_eq: $user2} }" +
-            "    }," +
-            "    _set: { room: $room, room_grant: $room_grant1 }" +
+            "    ]}," +
+            "    _set: { room: $room}" +
             "  ) {" +
             "    affected_rows" +
             "  }" +
-            "" +
             "  match2: update_queue_matches(" +
             "    where: { _and: [" +
             "      { user: {_eq: $user2} }," +
             "      { partner: {_eq: $user1} }" +
-            "    }," +
-            "    _set: { room: $room, room_grant: $room_grant2 }" +
+            "    ]}," +
+            "    _set: { room: $room }" +
             "  ) {" +
             "    affected_rows" +
             "  }" +
-            "" +
             "  room_list: insert_room_list(" +
-            "    objects: { user1: $user1, user2: $user2, room_id: $room, last_check: null }, " +
-            "    on_conflict: { constraint: room_list_pkey, update_columns: last_check }" +
+            "    objects: { user1: $user1, user2: $user2, room: $room, last_check: null }, " +
+            "    on_conflict: { constraint: room_list_pkey, update_columns: [room, last_check] }" +
             "  ) {" +
             "    affected_rows" +
             "  }" +
+            "  room_auth1: " +
+            "    insert_room_auth(" +
+            "      objects: {user: $user1, room: $room, room_grant: $room_grant1}," +
+            "      on_conflict: {constraint: room_auth_pkey, update_columns: room_grant}" +
+            "    ) {" +
+            "      affected_rows" +
+            "    }" +
+            "  room_auth2: " +
+            "    insert_room_auth(" +
+            "      objects: {user: $user2, room: $room, room_grant: $room_grant2}," +
+            "      on_conflict: {constraint: room_auth_pkey, update_columns: room_grant}" +
+            "    ) {" +
+            "      affected_rows" +
+            "    }" +
             "}";
 }

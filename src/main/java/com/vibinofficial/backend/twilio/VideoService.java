@@ -31,7 +31,6 @@ public class VideoService {
             throw new UnsupportedOperationException();
         }
 
-        log.info("VidService Config: {}", config);
         Room room = Room.creator().create();
         String roomSid = room.getSid();
 
@@ -39,6 +38,7 @@ public class VideoService {
         String grantUser1 = grantBuilder.identity(user1).build().toJwt();
         String grantUser2 = grantBuilder.identity(user2).build().toJwt();
 
+        log.info("Created room for {}/{}: {}", user1, user2, roomSid);
         return new RoomGrants(roomSid, user1, user2, grantUser1, grantUser2);
     }
 }
