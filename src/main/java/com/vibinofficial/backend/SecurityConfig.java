@@ -33,6 +33,8 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
 
         http.authorizeRequests()
                 .mvcMatchers("/api/**").authenticated()
+                .mvcMatchers("/avatars").authenticated()
+                .mvcMatchers("/avatars/**").permitAll()
                 .anyRequest().denyAll();
     }
 

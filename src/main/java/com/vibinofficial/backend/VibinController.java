@@ -50,12 +50,12 @@ public class VibinController {
 
     @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
     public void createRooms() {
-        log.info("Checking for needed rooms");
-
-        this.hasuraService
-                .queryMatchesReady()
-                .flatMap(this::createRoom)
-                .blockLast();
+//        log.info("Checking for needed rooms");
+//
+//        this.hasuraService
+//                .queryMatchesReady()
+//                .flatMap(this::createRoom)
+//                .blockLast();
     }
 
     private Mono<GraphQLResponse> createRoom(QueueMatch match) {
