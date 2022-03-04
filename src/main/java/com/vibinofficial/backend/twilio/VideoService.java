@@ -18,8 +18,7 @@ public class VideoService {
 
     @EventListener
     public void onInit(final ApplicationReadyEvent ev) {
-        // TODO: This sucks balls
-        if (!this.config.isEnabled()) {
+        if (this.config.isDisabled()) {
             log.warn("VideoService disabled!");
             return;
         }
@@ -27,7 +26,7 @@ public class VideoService {
     }
 
     public RoomGrants createRoomForMatch(String user1, String user2) {
-        if (!this.config.isEnabled()) {
+        if (this.config.isDisabled()) {
             throw new UnsupportedOperationException();
         }
 

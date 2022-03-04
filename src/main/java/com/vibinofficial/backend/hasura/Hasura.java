@@ -106,14 +106,19 @@ public class Hasura {
 
     public Mono<GraphQLResponse> insertRoomEntry(RoomGrants roomGrants) {
         return this.client.executeMutation(
-                GraphQLMutations.SET_ROOM_INFO,
+                GraphQLMutations.createRoom,
                 Map.of("user1", roomGrants.getUser1(),
                         "user2", roomGrants.getUser2(),
                         "room", roomGrants.getRoomSid(),
                         "room_grant1", roomGrants.getGrantUser1(),
                         "room_grant2", roomGrants.getGrantUser2()));
-        // todo insert into queuematches: user=user1, partner=user2, room=roomId
-        // todo insert into queuematches: user=user2, partner=user1, room=roomId
-        // todo insert rooms: user1=user1, user2=user2, room=roomId, grant1=grant1, grant2=grant2
+    }
+
+    public Mono<GraphQLResponse> createChatEntries(QueueMatch match) {
+        return this.client.executeMutation(
+                GraphQLMutations.CREATE_USER_CHATS,
+                Map.of("user1", match.getUser1(),
+                        "user2", match.getUser2())
+        );
     }
 }

@@ -24,8 +24,7 @@ spring:
       request-timeout: 10000
 
 vibin:
-  enabled: true
-  token: "Mesud1UHCBi3DWDNceztvxsnzX8frl0i"
+  disabled: false
   account: "AC7eb55afa42f9ccb4ca0c3f1b81d024c2"
   key: "SK0055386c2f9acc72c7eccb1138641f1c"
 

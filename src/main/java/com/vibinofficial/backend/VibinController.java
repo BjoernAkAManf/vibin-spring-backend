@@ -50,8 +50,6 @@ public class VibinController {
 
     @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
     public void createRooms() {
-        log.info("Checking for needed rooms");
-
         this.hasuraService
                 .queryMatchesReady()
                 .flatMap(this::createRoom)
@@ -90,12 +88,14 @@ public class VibinController {
             throw new IllegalStateException(msg);
         }
 
+        // chat1 and chat2 do not need to be checked. if affected_rows == 0, the entry already existed
+
         return response;
     }
 
     @Scheduled(fixedRate = 1000, timeUnit = TimeUnit.MILLISECONDS)
     public void createPolling() {
-        if (!this.config.isEnabled()) {
+        if (this.config.isDisabled()) {
             log.warn("Polling disabled!");
             return;
         }

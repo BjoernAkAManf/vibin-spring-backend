@@ -99,8 +99,11 @@ public class GraphQLMutations {
             "  }" +
             "}";
 
-    /** Make sure to double-check that user1 < user2! */
-    public static final String SET_ROOM_INFO = "mutation " +
+    /**
+     * Make sure to double-check that user1 < user2!
+     * Also Inserts user chats for both given users, does nothing on conflicts
+     */
+    public static final String createRoom = "mutation " +
             "SetRoomInfo(" +
             "  $user1: uuid!, $user2: uuid!, $room: String!, $room_grant1: String!, $room_grant2: String!" +
             ") {" +
@@ -142,5 +145,18 @@ public class GraphQLMutations {
             "    ) {" +
             "      affected_rows" +
             "    }" +
+            "  chat1: insert_user_chat(objects: {user: $user1, with: $user2}, " +
+            "    on_conflict: {constraint: user_chat_pkey}) {" +
+            "    affected_rows" +
+            "  }" +
+            "  chat2: insert_user_chat(objects: {user: $user2, with: $user1}," +
+            "  on_conflict: {constraint: user_chat_pkey}) {" +
+            "    affected_rows" +
+            "  }" +
+            "}";
+
+    public static final String CREATE_USER_CHATS = "mutation " +
+            "CreateUserChat($user1: uuid!, $user2: uuid!) {" +
+
             "}";
 }

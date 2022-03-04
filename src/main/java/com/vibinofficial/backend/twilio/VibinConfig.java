@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("vibin")
 public class VibinConfig {
 
-    private boolean enabled;
+    private boolean disabled;
     private String token;
     private String key;
     private String account;
