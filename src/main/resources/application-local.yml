@@ -31,7 +31,15 @@ vibin:
   # Configures the Keycloak User managed by this server
   backend:
     hasura:
+      enabled: false
       host: 'http://localhost:8090/v1/graphql'
     user:
       name: example-user
       password: example-password
+
+services:
+  minio:
+    bucket: root
+    host: http://localhost:9000
+    access-key: admin
+    secret-key: admin_password

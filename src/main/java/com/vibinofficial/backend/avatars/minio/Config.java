@@ -1,4 +1,4 @@
-package com.vibinofficial.backend.hasura;
+package com.vibinofficial.backend.avatars.minio;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -6,8 +6,10 @@ import org.springframework.context.annotation.Configuration;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "vibin.backend.hasura")
-public class HasuraConfig {
-    private boolean enabled = true;
+@ConfigurationProperties("services.minio")
+public class Config {
     private String host;
+    private String accessKey;
+    private String secretKey;
+    private String bucket;
 }
