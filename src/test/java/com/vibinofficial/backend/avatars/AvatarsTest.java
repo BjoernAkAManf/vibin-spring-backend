@@ -59,6 +59,8 @@ class AvatarsTest {
         registry.add("services.minio.secretKey", MINIO::getPassword);
         registry.add("services.minio.bucket", () -> "meow");
 
+        registry.add("vibin.disabled", () -> true);
+
         registry.add("keycloak.realm", () -> "aabbcc");
         registry.add("keycloak.auth-server-url", KEYCLOAK::getAuthServerUrl);
         registry.add("keycloak.ssl-required", () -> "none");

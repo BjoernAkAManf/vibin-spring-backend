@@ -5,6 +5,7 @@ import io.minio.GetObjectArgs;
 import io.minio.GetObjectResponse;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.errors.ErrorResponseException;
 import io.minio.errors.MinioException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,11 @@ public final class Storage implements AvatarStorage {
 
     @Override
     public Avatar read(final String path) throws IOException {
-        return new MinioAvatar(this.create(this.config.getBucket(), path));
+        final var result = this.create(this.config.getBucket(), path);
+        if (result == null) {
+            return AvatarStorage.DEFAULT;
+        }
+        return new MinioAvatar(result);
     }
 
     @Override
@@ -43,9 +48,15 @@ public final class Storage implements AvatarStorage {
     private GetObjectResponse create(final String bucket, final String obj) throws IOException {
         try {
             return this.client.getObject(GetObjectArgs.builder()
-                .bucket(bucket)
-                .object(obj)
-                .build());
+                    .bucket(bucket)
+                    .object(obj)
+                    .build());
+        } catch (final ErrorResponseException ex) {
+            final var code = ex.errorResponse().code();
+            if ("NoSuchKey".equals(code)) {
+                return null;
+            }
+            throw new IOException("Error accessing minio", ex);
         } catch (final MinioException | InvalidKeyException | NoSuchAlgorithmException ex) {
             throw new IOException("Error accessing minio", ex);
         }

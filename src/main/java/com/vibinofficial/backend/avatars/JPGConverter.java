@@ -15,13 +15,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @RequiredArgsConstructor
-public class JPGConverter implements AvatarStorage{
+public class JPGConverter implements AvatarStorage {
     private final AvatarStorage storage;
     private final ExecutorService tasks;
 
     @Override
     public Avatar read(final String path) throws IOException {
-        return this.storage.read(this.translatePath(path));
+        String jpegPath = this.translatePath(path);
+        return this.storage.read(jpegPath);
     }
 
     @Override
@@ -38,6 +39,7 @@ public class JPGConverter implements AvatarStorage{
         );
 
         img.createGraphics()
+            // TODO: Might be nicer to have custom bg color
             .drawImage(image, 0, 0, Color.white, null);
 
         final var in = new PipedInputStream();

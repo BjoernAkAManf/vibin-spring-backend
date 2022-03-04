@@ -30,6 +30,7 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         http.exceptionHandling().accessDeniedHandler(this::accessDeniedHandler);
 
         http.csrf().disable();
+        http.cors();
 
         http.authorizeRequests()
                 .mvcMatchers("/api/**").authenticated()

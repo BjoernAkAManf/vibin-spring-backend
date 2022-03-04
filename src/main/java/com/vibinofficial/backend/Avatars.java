@@ -8,11 +8,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -29,8 +25,11 @@ public class Avatars {
     private final AvatarStorage storage;
 
     @PostMapping
+    // TODO: Remove
+    @CrossOrigin("http://localhost:8080")
     public Map<String, Object> upload(final Principal user, final HttpServletRequest req) throws IOException {
-        this.storage.write(user.getName(), req.getInputStream());
+        final var name = user.getName();
+        this.storage.write(name, req.getInputStream());
         return Map.of("success", true);
     }
 
@@ -40,6 +39,7 @@ public class Avatars {
             return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.valueOf(m.getMediaType()))
                 .cacheControl(CacheControl.maxAge(5, TimeUnit.MINUTES))
+                // TODO: May be less great to read all in memory
                 .body(m.open().readAllBytes());
         } catch (final ConnectException ex) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
