@@ -1,9 +1,10 @@
 package com.vibinofficial.backend.avatars;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 
 import javax.imageio.ImageIO;
-import java.awt.Color;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,13 +27,15 @@ public class JPGConverter implements AvatarStorage {
     }
 
     @Override
-    public void write(final String path, final InputStream is) throws IOException {
+    public void write(final String path, final InputStream is, final String mediaType) throws IOException {
         final var image = ImageIO.read(is);
         if (image == null) {
             throw new UnsupportedOperationException("Reading Image failed");
         }
 
         final var img = new BufferedImage(
+            // TODO: Limit to whatever size
+            // TODO: Ration Support
             image.getWidth(),
             image.getHeight(),
             BufferedImage.TYPE_INT_BGR
@@ -46,7 +49,7 @@ public class JPGConverter implements AvatarStorage {
         final var out = new PipedOutputStream(in);
 
         final var f1 = this.tasks.submit(() -> {
-            this.storage.write(this.translatePath(path), in);
+            this.storage.write(this.translatePath(path), in, MediaType.IMAGE_JPEG_VALUE);
             return null;
         });
 

@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 
 @Service
 @Named("avatar-storage-minio")
@@ -33,11 +34,12 @@ public final class Storage implements AvatarStorage {
     }
 
     @Override
-    public void write(final String path, final InputStream is) throws IOException {
+    public void write(final String path, final InputStream is, final String mediaType) throws IOException {
         try {
             this.client.putObject(PutObjectArgs.builder()
                 .bucket(this.config.getBucket())
                 .object(path)
+                .headers(Map.of("Content-Type", mediaType))
                 .stream(is, -1, 5 * 1024 * 1024)
                 .build());
         } catch (final MinioException | InvalidKeyException | NoSuchAlgorithmException ex) {

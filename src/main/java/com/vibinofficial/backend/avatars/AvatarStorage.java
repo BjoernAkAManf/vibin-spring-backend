@@ -9,7 +9,8 @@ public interface AvatarStorage {
 
     Avatar read(String path) throws IOException;
 
-    void write(String path, InputStream is) throws IOException;
+    /** mediaType may be null if unknown or doesn't matter */
+    void write(String path, InputStream is, String mediaType) throws IOException;
 
     interface Avatar extends Closeable {
         InputStream open() throws IOException;

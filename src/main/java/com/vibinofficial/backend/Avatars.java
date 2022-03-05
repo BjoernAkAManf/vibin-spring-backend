@@ -29,7 +29,8 @@ public class Avatars {
     @CrossOrigin("http://localhost:8080")
     public Map<String, Object> upload(final Principal user, final HttpServletRequest req) throws IOException {
         final var name = user.getName();
-        this.storage.write(name, req.getInputStream());
+        // We have no idea what media type is being published right now
+        this.storage.write(name, req.getInputStream(), null);
         return Map.of("success", true);
     }
 
