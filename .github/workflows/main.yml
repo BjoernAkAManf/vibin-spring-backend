@@ -38,7 +38,8 @@ jobs:
         run: earthly --version
 
       - name: Run build
-        run: earthly +main
+        # We use docker in docker: Therefore we need to be root
+        run: earthly -P +main
 
       - name: Run push
         if: ${{ !env.IS_RELEASE }}
