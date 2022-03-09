@@ -25,7 +25,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
-import java.awt.Color;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -186,13 +186,11 @@ class AvatarsTest {
 
     private static void createBucket() {
         final var client = MINIO.getClient();
-        Assertions.assertDoesNotThrow(() -> {
-            client
+        Assertions.assertDoesNotThrow(() -> client
                 .makeBucket(MakeBucketArgs.builder()
-                    .bucket("meow")
-                    .build()
-                );
-        });
+                        .bucket("meow")
+                        .build()
+                ));
     }
 
     private String login() {

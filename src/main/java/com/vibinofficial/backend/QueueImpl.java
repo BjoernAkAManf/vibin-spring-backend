@@ -25,8 +25,6 @@ public final class QueueImpl implements VibinQueue {
         } else {
             log.info("User joined the queue: {} ({})", uid, this.queue.size());
             this.queue.add(uid);
-
-            // logQueue();
         }
     }
 
@@ -37,16 +35,12 @@ public final class QueueImpl implements VibinQueue {
 
     @Override
     public void leave(String uid) {
-        log.info("Begin leave");
         if (!this.queue.contains(uid)) {
             log.info("User was not in queue: {}", uid);
         } else {
-            log.info("User left the queue: {}", uid);
+            log.info("User left the queue: {} ({})", uid, this.queue.size());
             this.queue.remove(uid);
-
-            logQueue();
         }
-        log.info("End leave");
     }
 
     @Override
