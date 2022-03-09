@@ -54,7 +54,6 @@ class AvatarsTest {
 
     @DynamicPropertySource
     static void createConfig(final DynamicPropertyRegistry registry) {
-        System.out.println("YYYYYYYY | " + MINIO);
         registry.add("services.minio.host", MINIO::getUrl);
         registry.add("services.minio.accessKey", MINIO::getUsername);
         registry.add("services.minio.secretKey", MINIO::getPassword);

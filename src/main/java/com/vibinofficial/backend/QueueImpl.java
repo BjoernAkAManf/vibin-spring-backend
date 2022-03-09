@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -19,22 +20,19 @@ public final class QueueImpl implements VibinQueue {
 
     @Override
     public void join(final String uid) {
-        log.info("Begin join");
         if (this.queue.contains(uid)) {
             log.info("User already in queue: {}", uid);
         } else {
-            log.info("User joined the queue: {}", uid);
+            log.info("User joined the queue: {} ({})", uid, this.queue.size());
             this.queue.add(uid);
 
-            logQueue();
+            // logQueue();
         }
-        log.info("End join");
     }
 
     private void logQueue() {
-        // TODO: Might not be nice to print whole queue
-        // List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
-        log.info("Queue size: {}", this.queue.size());
+        List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
+        log.info("Queue size: {}: {}", this.queue.size(), shortenedQueueEntries);
     }
 
     @Override

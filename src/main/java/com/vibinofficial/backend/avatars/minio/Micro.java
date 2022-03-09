@@ -11,7 +11,6 @@ public class Micro {
     @Bean
     @Singleton
     public MinioClient createClient(final Config config) {
-        System.out.println("XXXXX | " +config);
         return MinioClient.builder()
             .endpoint(config.getHost())
             .credentials(config.getAccessKey(), config.getSecretKey())
