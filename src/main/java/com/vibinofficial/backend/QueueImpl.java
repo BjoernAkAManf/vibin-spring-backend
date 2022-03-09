@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -34,8 +33,8 @@ public final class QueueImpl implements VibinQueue {
 
     private void logQueue() {
         // TODO: Might not be nice to print whole queue
-        List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
-        log.info("Queue size: {}: {}", this.queue.size(), shortenedQueueEntries);
+        // List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
+        log.info("Queue size: {}", this.queue.size());
     }
 
     @Override
