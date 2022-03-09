@@ -48,4 +48,4 @@ jobs:
 
       - name: Run push
         if: ${{ env.IS_RELEASE }}
-        run: earthly --push +main
+        run: earthly --push -P +main
