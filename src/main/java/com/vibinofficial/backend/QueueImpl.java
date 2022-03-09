@@ -33,6 +33,7 @@ public final class QueueImpl implements VibinQueue {
     }
 
     private void logQueue() {
+        // TODO: Might not be nice to print whole queue
         List<String> shortenedQueueEntries = UidUtils.shorten(this.queue);
         log.info("Queue size: {}: {}", this.queue.size(), shortenedQueueEntries);
     }

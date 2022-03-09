@@ -3,6 +3,7 @@ package com.vibinofficial.backend;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 public class QueueImplIntegrationTest {
     @Inject
     private QueueImpl queue;
@@ -24,7 +26,7 @@ public class QueueImplIntegrationTest {
     }
 
     @Test
-    @Timeout(value = 1)
+    @Timeout(value = 5)
     public void multi() {
         assertThat(queue.getQueue()).isEmpty();
         var threads = new ArrayList<Thread>();

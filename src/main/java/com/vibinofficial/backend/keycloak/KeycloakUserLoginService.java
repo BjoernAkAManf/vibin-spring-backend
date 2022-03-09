@@ -1,5 +1,6 @@
 package com.vibinofficial.backend.keycloak;
 
+import com.vibinofficial.backend.twilio.VibinConfig;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +24,13 @@ public class KeycloakUserLoginService {
     private final KeycloakSpringBootProperties server;
     private final KeycloakClientConfig client;
     private final ApplicationEventPublisher publisher;
+    private final VibinConfig config;
 
     @Scheduled(fixedRate = 60, timeUnit = TimeUnit.SECONDS)
     public void updateToken() {
+        if (this.config.isDisabled()) {
+            return;
+        }
         try {
             String baseUrl = String.format("%s/realms/%s", this.server.getAuthServerUrl(), this.server.getRealm());
 

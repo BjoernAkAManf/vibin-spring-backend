@@ -1,3 +1,10 @@
 ---
 vibin:
-  enabled: false
+  disabled: true
+
+services:
+  minio:
+    host: example.com
+    access-key: example-key
+    secret-key: example-secret
+    bucket: example

@@ -50,6 +50,9 @@ public class VibinController {
 
     @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
     public void createRooms() {
+        if (this.config.isDisabled()) {
+            return;
+        }
         this.hasuraService
                 .queryMatchesReady()
                 .flatMap(this::createRoom)
