@@ -4,6 +4,7 @@ import com.vibinofficial.backend.avatars.AvatarStorage;
 import com.vibinofficial.backend.avatars.minio.MinioExceptions;
 import io.minio.errors.ErrorResponseException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @RestController
 @RequestMapping("/avatars")
 @RequiredArgsConstructor
@@ -43,6 +45,7 @@ public class Avatars {
                 // TODO: May be less great to read all in memory
                 .body(m.open().readAllBytes());
         } catch (final ConnectException ex) {
+            log.error("Connection failed", ex);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body("BAD GATEWAY");
         } catch (final IOException ex) {
