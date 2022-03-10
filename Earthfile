@@ -30,7 +30,7 @@ compile-jar:
     ENV MAVEN_HOME ${MAVEN_HOME}
     ENV PATH $MAVEN_HOME/bin:$PATH
     RUN wget http://archive.apache.org/dist/maven/maven-3/3.8.1/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
-      tar -zxvf apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+      tar -zxf apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
       rm apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
       mv apache-maven-${MAVEN_VERSION} /usr/lib/mvn
 
@@ -40,10 +40,11 @@ compile-jar:
 
     # Copy source files over
     COPY ./src ./src
-    # ISSUE: Unfortunately -o is currently NOT possible, as we use surefire-plugin and that download dynamically!
+    # TODO: When push is called, this is running twice
     WITH DOCKER \
         --pull quay.io/keycloak/keycloak:17.0.0-legacy \
         --pull quay.io/minio/minio:latest
+        # ISSUE: Unfortunately -o is currently NOT possible, as we use surefire-plugin and that download dynamically!
         RUN mvn -B package
     END
     SAVE ARTIFACT target/*.jar /app.jar

@@ -17,13 +17,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
 
 @KeycloakConfiguration
 @RequiredArgsConstructor
 public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
-
     private final ObjectMapper mapper;
+    private final VibinCorsConfig config;
 
     @Override
     protected void configure(final HttpSecurity http) throws Exception {
@@ -34,7 +33,10 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         http.csrf().disable();
         http.cors().configurationSource(request -> {
             final var cors = new CorsConfiguration();
-            cors.setAllowedOrigins(List.of("*"));
+            cors.setAllowedOrigins(this.config.getOrigins());
+            cors.setAllowedMethods(this.config.getMethods());
+            cors.setAllowCredentials(this.config.isCredentials());
+            cors.setAllowedHeaders(this.config.getHeaders());
             return cors;
         });
 
