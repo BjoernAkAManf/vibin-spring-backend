@@ -6,10 +6,12 @@ import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
 
 @EnableScheduling
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
@@ -27,7 +29,20 @@ public class VibinBackend {
 
     @Bean
     public KeycloakConfigResolver keycloakConfigResolver(final VibinConfig config) {
-        System.out.println(config);
         return new KeycloakSpringBootConfigResolver();
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+        value = "logging.level.web",
+        havingValue = "DEBUG"
+    )
+    public CommonsRequestLoggingFilter requestLoggingFilter() {
+        final var filter = new CommonsRequestLoggingFilter();
+        filter.setIncludeClientInfo(true);
+        filter.setIncludeQueryString(true);
+        filter.setIncludePayload(true);
+        filter.setIncludeHeaders(false);
+        return filter;
     }
 }
