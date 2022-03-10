@@ -12,10 +12,12 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.web.cors.CorsConfiguration;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 
 @KeycloakConfiguration
 @RequiredArgsConstructor
@@ -30,7 +32,11 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         http.exceptionHandling().accessDeniedHandler(this::accessDeniedHandler);
 
         http.csrf().disable();
-        http.cors().disable();
+        http.cors().configurationSource(request -> {
+            final var cors = new CorsConfiguration();
+            cors.setAllowedOrigins(List.of("*"));
+            return cors;
+        });
 
         http.authorizeRequests()
                 .mvcMatchers("/api/**").authenticated()

@@ -16,6 +16,7 @@ keycloak:
   resource: test-client
   public-client: true
   confidential-port: 0
+  cors: off
 
 spring:
   mvc:
