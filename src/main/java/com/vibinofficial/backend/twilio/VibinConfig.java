@@ -7,8 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
-
 @Data
 @Configuration
 @ConfigurationProperties("vibin")
@@ -18,7 +16,6 @@ public class VibinConfig {
     private String token;
     private String key;
     private String account;
-    private final List<String> allowedOrigins;
 
     @NotNull
     AccessToken.Builder getGrantBuilder(String roomSid) {

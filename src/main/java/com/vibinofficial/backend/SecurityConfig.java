@@ -2,7 +2,6 @@ package com.vibinofficial.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibinofficial.backend.api.HasuraError;
-import com.vibinofficial.backend.twilio.VibinConfig;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
@@ -13,7 +12,6 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.web.cors.CorsConfiguration;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -22,8 +20,8 @@ import java.io.IOException;
 @KeycloakConfiguration
 @RequiredArgsConstructor
 public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
+
     private final ObjectMapper mapper;
-    private final VibinConfig config;
 
     @Override
     protected void configure(final HttpSecurity http) throws Exception {
@@ -32,11 +30,7 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         http.exceptionHandling().accessDeniedHandler(this::accessDeniedHandler);
 
         http.csrf().disable();
-        http.cors().configurationSource(req -> {
-            final var cors = new CorsConfiguration();
-            cors.setAllowedOrigins(this.config.getAllowedOrigins());
-            return cors;
-        });
+        http.cors();
 
         http.authorizeRequests()
                 .mvcMatchers("/api/**").authenticated()

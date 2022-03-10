@@ -28,9 +28,6 @@ vibin:
   account: "AC7eb55afa42f9ccb4ca0c3f1b81d024c2"
   key: "SK0055386c2f9acc72c7eccb1138641f1c"
 
-  # Warning: Using '*' is not secure and should not be used in Production
-  allowed-origins: []
-
   # Configures the Keycloak User managed by this server
   backend:
     hasura:
