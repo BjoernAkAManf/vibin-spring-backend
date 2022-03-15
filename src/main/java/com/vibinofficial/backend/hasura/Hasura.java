@@ -40,8 +40,7 @@ public class Hasura {
     }
 
     public Mono<GraphQLResponse> createInitialMatchEntry(String user) {
-        return this.client
-                .executeMutation(GraphQLMutations.INSERT_INITIAL_USER_MATCH_ENTRY, Map.of("user", user));
+        return this.client.executeMutation(GraphQLMutations.INSERT_INITIAL_USER_MATCH_ENTRY, Map.of("user", user));
     }
 
     public Mono<GraphQLResponse> deleteQueueEntry(String user) {

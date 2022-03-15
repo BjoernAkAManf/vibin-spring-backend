@@ -22,7 +22,7 @@ public class GraphQLMutations {
             "    }," +
             "    on_conflict: {" +
             "      constraint: queue_matches_pkey," +
-            "      update_columns: [accepted, active, partner, match_time, room]" +
+            "      update_columns: [accepted, active, partner, match_time, room, created_at]" +
             "    }) {" +
             "    affected_rows" +
             "  }" +
