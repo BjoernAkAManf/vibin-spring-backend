@@ -39,6 +39,11 @@ vibin:
       password: example-password
 
 services:
+  spotify:
+    disabled: false
+    clientId: ''
+    clientSecret: ''
+
   minio:
     bucket: root
     host: http://localhost:9000
