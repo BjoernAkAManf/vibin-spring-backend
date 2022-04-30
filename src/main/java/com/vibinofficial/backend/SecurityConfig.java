@@ -46,10 +46,9 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
 
         http.authorizeRequests()
                 .mvcMatchers("/api/**").authenticated()
+                .mvcMatchers("/spotify/**").authenticated()
                 .mvcMatchers("/avatars").authenticated()
                 .mvcMatchers("/avatars/**").permitAll()
-                // TODO: Change
-                .mvcMatchers("/spotify/**").permitAll()
                 .anyRequest().denyAll();
     }
 

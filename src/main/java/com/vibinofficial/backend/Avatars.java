@@ -27,8 +27,6 @@ public class Avatars {
     private final AvatarStorage storage;
 
     @PostMapping
-    // TODO: Remove
-    @CrossOrigin("http://localhost:8080")
     public Map<String, Object> upload(final Principal user, final HttpServletRequest req) throws IOException {
         final var name = user.getName();
         // We have no idea what media type is being published right now
