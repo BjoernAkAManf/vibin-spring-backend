@@ -1,13 +1,16 @@
 package com.vibinofficial.backend.spotify;
 
+import com.vibinofficial.backend.spotify.requests.SpotifyIdRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.core5.http.ParseException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
 
 import java.io.IOException;
@@ -74,5 +77,11 @@ public class SpotifyController {
         return Arrays.stream(l.getItems())
                 .map(SpotifyTrack::new)
                 .toArray(SpotifyTrack[]::new);
+    }
+
+    @GetMapping("/resolve")
+    public ResponseEntity<?> resolveSpotifyId(@RequestParam("id") final String id) {
+            SpotifyApi api = this.config.getApi();
+            return new SpotifyIdRequest().resolve(api, id);
     }
 }

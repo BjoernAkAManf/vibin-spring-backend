@@ -4,7 +4,7 @@ import lombok.Data;
 import se.michaelthelin.spotify.model_objects.specification.Artist;
 
 @Data
-public final class SpotifyArtist {
+public final class SpotifyArtist implements AnyMeta {
     private final String uri;
     private final String image;
     private final String name;
@@ -13,5 +13,10 @@ public final class SpotifyArtist {
         this.uri = artist.getUri();
         this.image = Images.getBestImageOf(artist);
         this.name = artist.getName();
+    }
+
+    @Override
+    public String[] getArtists() {
+        return null;
     }
 }

@@ -7,7 +7,7 @@ import se.michaelthelin.spotify.model_objects.specification.Track;
 import java.util.Arrays;
 
 @Data
-public final class SpotifyTrack {
+public final class SpotifyTrack implements AnyMeta {
     private final String uri;
     private final String image;
     private final String name;
