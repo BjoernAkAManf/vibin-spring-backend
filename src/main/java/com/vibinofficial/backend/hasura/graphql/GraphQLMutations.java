@@ -133,14 +133,14 @@ public class GraphQLMutations {
             "  }" +
             "  room_auth1: " +
             "    insert_room_auth(" +
-            "      objects: {user: $user1, room: $room, room_grant: $room_grant1}," +
+            "      objects: {user: $user1, room: $room, room_grant: $room_grant1, with: $user2}," +
             "      on_conflict: {constraint: room_auth_pkey, update_columns: room_grant}" +
             "    ) {" +
             "      affected_rows" +
             "    }" +
             "  room_auth2: " +
             "    insert_room_auth(" +
-            "      objects: {user: $user2, room: $room, room_grant: $room_grant2}," +
+            "      objects: {user: $user2, room: $room, room_grant: $room_grant2, with: $user1}," +
             "      on_conflict: {constraint: room_auth_pkey, update_columns: room_grant}" +
             "    ) {" +
             "      affected_rows" +
@@ -153,10 +153,5 @@ public class GraphQLMutations {
             "  on_conflict: {constraint: user_chat_pkey}) {" +
             "    affected_rows" +
             "  }" +
-            "}";
-
-    public static final String CREATE_USER_CHATS = "mutation " +
-            "CreateUserChat($user1: uuid!, $user2: uuid!) {" +
-
             "}";
 }

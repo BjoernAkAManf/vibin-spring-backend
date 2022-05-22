@@ -112,12 +112,4 @@ public class Hasura {
                         "room_grant1", roomGrants.getGrantUser1(),
                         "room_grant2", roomGrants.getGrantUser2()));
     }
-
-    public Mono<GraphQLResponse> createChatEntries(QueueMatch match) {
-        return this.client.executeMutation(
-                GraphQLMutations.CREATE_USER_CHATS,
-                Map.of("user1", match.getUser1(),
-                        "user2", match.getUser2())
-        );
-    }
 }
