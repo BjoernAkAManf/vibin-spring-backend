@@ -112,4 +112,26 @@ public class Hasura {
                         "room_grant1", roomGrants.getGrantUser1(),
                         "room_grant2", roomGrants.getGrantUser2()));
     }
+
+    public Mono<GraphQLResponse> deleteRoom(final String id) {
+        return this.client.executeMutation(
+                GraphQLMutations.DELETE_ROOM,
+                Map.of("room", id)
+        );
+    }
+
+    public Mono<GraphQLResponse> checkUserCanDelete(String room, String user) {
+        return this.client
+                .executeQuery(
+                        GraphQLQueries.CHECK_DELETE_ROOM,
+                        Map.of("room", room, "user", user)
+                )
+                .map(GraphQlExceptions::checkResult)
+                .flatMap(resp -> {
+                    final var perm = resp.extractValueAsObject("room_auth[*].user", String[].class).length > 0;
+                    return perm
+                            ? Mono.just(resp)
+                            : Mono.error(() -> new IllegalStateException("User has no permission"));
+                });
+    }
 }

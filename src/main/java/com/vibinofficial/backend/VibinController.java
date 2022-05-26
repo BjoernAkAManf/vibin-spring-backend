@@ -1,7 +1,7 @@
 package com.vibinofficial.backend;
 
 import com.netflix.graphql.dgs.client.GraphQLResponse;
-import com.vibinofficial.backend.api.QueueJoinResult;
+import com.vibinofficial.backend.api.ApiResponse;
 import com.vibinofficial.backend.api.RoomInfo;
 import com.vibinofficial.backend.hasura.GraphQlExceptions;
 import com.vibinofficial.backend.hasura.Hasura;
@@ -13,15 +13,14 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.security.Principal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -132,10 +131,31 @@ public class VibinController {
         return response;
     }
 
+    @DeleteMapping("/room/{id}")
+    public Mono<ApiResponse> deleteRoom(final Principal principal, @PathVariable final String id) {
+        return this.hasuraService
+                .checkUserCanDelete(id, principal.getName())
+                .flatMap(resp -> Flux
+                        .merge(
+                                this.videoService.deleteRoom(id)
+                                        .map(v -> ApiResponse.SUCCESS)
+                                        .doOnError(err -> log.error("Error deleting Twilio room: {}", id, err))
+                                        .onErrorReturn(ApiResponse.ERROR),
+
+                                this.hasuraService.deleteRoom(id).map(GraphQlExceptions::checkResult)
+                                        .doOnError(err -> log.error("Error deleting room in Hasura: {}", id, err))
+                                        .map(v -> ApiResponse.SUCCESS)
+                                        .onErrorReturn(ApiResponse.ERROR)
+                        )
+                        .collect(() -> new AtomicBoolean(true), (state, next) -> state.compareAndSet(false, !next.isSuccess()))
+                        .map(v -> v.get() ? ApiResponse.SUCCESS : ApiResponse.ERROR)
+                )
+                .onErrorReturn(ApiResponse.ERROR);
+    }
 
     @PostMapping("/match/accept")
     // TODO: Type obv. wrong-ish
-    public Mono<QueueJoinResult> matchAccept(final Principal principal) {
+    public Mono<ApiResponse> matchAccept(final Principal principal) {
         final String user = principal.getName();
         log.info("Match Accepted: {}", user);
 
@@ -143,7 +163,7 @@ public class VibinController {
                 .map(GraphQlExceptions::checkResult)
                 .map(v -> checkAcceptResult(v, user))
                 .doOnError(ex -> log.error("Accepting match ({} with partner {}) failed.", user, "TODO", ex))
-                .onErrorReturn(QueueJoinResult.ERROR);
+                .onErrorReturn(ApiResponse.ERROR);
     }
 
     @Data
@@ -153,7 +173,7 @@ public class VibinController {
     }
 
     @PostMapping("/match/decline")
-    public Mono<QueueJoinResult> matchDecline(final Principal principal, @RequestBody final HasuraBody<MatchInput> body) {
+    public Mono<ApiResponse> matchDecline(final Principal principal, @RequestBody final HasuraBody<MatchInput> body) {
         final String user = principal.getName();
         final String partner = body.getInput().getPartner();
         log.info("Match Declined: {} with {}", user, partner);
@@ -162,35 +182,35 @@ public class VibinController {
                 .map(GraphQlExceptions::checkResult)
                 .map(v -> this.checkDeclineResult(v, user, partner))
                 .doOnError(ex -> log.error("Declining match ({} with partner {}) failed.", user, partner, ex))
-                .onErrorReturn(QueueJoinResult.ERROR);
+                .onErrorReturn(ApiResponse.ERROR);
     }
 
-    private QueueJoinResult checkAcceptResult(GraphQLResponse response, final String user) {
+    private ApiResponse checkAcceptResult(GraphQLResponse response, final String user) {
         Integer affectedRows = response.extractValueAsObject("update_queue_matches.affected_rows", Integer.class);
         if (!Objects.equals(affectedRows, 1)) {
             log.error("Superficial Accept ({}): {} could not accept.", affectedRows, user);
-            return QueueJoinResult.ERROR;
+            return ApiResponse.ERROR;
         }
-        return QueueJoinResult.SUCCESS;
+        return ApiResponse.SUCCESS;
     }
 
-    private QueueJoinResult checkDeclineResult(GraphQLResponse response, String user, String match) {
+    private ApiResponse checkDeclineResult(GraphQLResponse response, String user, String match) {
         // REALLY THROW ERROR PLS
         if (response.hasErrors()) {
             log.error("Decline failed: {}", response.getErrors());
-            return QueueJoinResult.ERROR;
+            return ApiResponse.ERROR;
         }
 
         Integer affectedRows = response.extractValueAsObject("self.affected_rows", Integer.class);
         if (!Objects.equals(affectedRows, 1)) {
             log.error("Superficial Decline ({}): {} has no such match: {}", affectedRows, user, match);
-            return QueueJoinResult.ERROR;
+            return ApiResponse.ERROR;
         }
-        return QueueJoinResult.SUCCESS;
+        return ApiResponse.SUCCESS;
     }
 
     @PostMapping("/queue/join")
-    public Mono<QueueJoinResult> joinQueue(Principal principal) {
+    public Mono<ApiResponse> joinQueue(Principal principal) {
         // TODO: IF user has current match, set that match to active = false
         final String user = principal.getName();
         log.info("joining queue: {}", user);
@@ -202,21 +222,21 @@ public class VibinController {
                 .map(GraphQlExceptions::checkResult)
                 .map(v -> checkQueueJoin(v, user))
                 .doOnError(ex -> log.error("Error while storing queue join ({}).", user, ex))
-                .onErrorReturn(QueueJoinResult.ERROR)
+                .onErrorReturn(ApiResponse.ERROR)
                 .doOnSuccess((r) -> this.queueService.join(user));
     }
 
-    private QueueJoinResult checkQueueJoin(GraphQLResponse response, String user) {
+    private ApiResponse checkQueueJoin(GraphQLResponse response, String user) {
         Integer affectedRows = response.extractValueAsObject("insert_queue_matches.affected_rows", Integer.class);
         if (!Objects.equals(affectedRows, 1)) {
             String msg = String.format("Could not update queue_match for user %s (%s)", user, affectedRows);
             throw new IllegalStateException(msg);
         }
-        return QueueJoinResult.SUCCESS;
+        return ApiResponse.SUCCESS;
     }
 
     @PostMapping("/queue/leave")
-    public Mono<QueueJoinResult> leaveQueue(Principal principal) {
+    public Mono<ApiResponse> leaveQueue(Principal principal) {
         final String user = principal.getName();
         log.info("leaving queue: {}", user);
 
@@ -224,17 +244,17 @@ public class VibinController {
                 .map(GraphQlExceptions::checkResult)
                 .map(v -> checkDeleteResult(v, user))
                 .doOnError(ex -> log.error("Leaving queue failed for user {}.", user, ex))
-                .onErrorReturn(QueueJoinResult.ERROR)
+                .onErrorReturn(ApiResponse.ERROR)
                 .doOnSubscribe((r) -> this.queueService.leave(user));
     }
 
-    private QueueJoinResult checkDeleteResult(GraphQLResponse response, String user) {
+    private ApiResponse checkDeleteResult(GraphQLResponse response, String user) {
         Integer affectedRows = response.extractValueAsObject("delete_queue_matches.affected_rows", Integer.class);
         if (!Objects.equals(affectedRows, 1)) {
             log.error("Superficial delete ({}): {} has no such queue entry.", affectedRows, user);
-            return QueueJoinResult.ERROR;
+            return ApiResponse.ERROR;
         }
-        return QueueJoinResult.SUCCESS;
+        return ApiResponse.SUCCESS;
     }
 
     public RoomInfo syncMatch(final Principal principal) {

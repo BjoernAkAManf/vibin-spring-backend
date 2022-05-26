@@ -5,6 +5,13 @@ public class GraphQLQueries {
     private GraphQLQueries() {
     }
 
+    public static final String CHECK_DELETE_ROOM = "query " +
+            "MyQuery($room: String!, $user: uuid!) {" +
+            "  room_auth(where: {_and: {room: {_eq: $room}, user: {_eq: $user}}}) {" +
+            "    user" +
+            "  }" +
+            "}";
+
     public static final String ROOM_LIST = "query " +
             "GetRoomList {" +
             "  room_list {" +

@@ -154,4 +154,17 @@ public class GraphQLMutations {
             "    affected_rows" +
             "  }" +
             "}";
+
+    public static final String DELETE_ROOM = "mutation " +
+            "DeleteRoom($room: String!) {" +
+            "  delete_room_auth(where: {room: {_eq: $room}}) {" +
+            "    affected_rows" +
+            "  }" +
+            "  delete_room_list(where: {room: {_eq: $room}}) {" +
+            "    affected_rows" +
+            "  }" +
+            "  delete_queue_matches(where: {room: {_eq: $room}}) {" +
+            "    affected_rows" +
+            "  }" +
+            "}";
 }
